@@ -14,7 +14,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest()
 @AutoConfigureMockMvc
 @Slf4j
-class RootControllerIntegrationTest {
+class AuditFilterIntegrationTest {
 
     @Resource
     private MockMvc mockMvc;
