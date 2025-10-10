@@ -19,7 +19,7 @@ import java.io.IOException;
 @Order(Ordered.HIGHEST_PRECEDENCE)
 @AllArgsConstructor
 @Slf4j
-public class AuditFilter extends OncePerRequestFilter {
+public class AuditFilter2 extends OncePerRequestFilter {
 
     private static final int CACHE_LIMIT_60k = 64 * 1024;
 
