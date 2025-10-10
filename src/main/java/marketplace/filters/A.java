@@ -19,7 +19,7 @@ import java.io.IOException;
 @Order(Ordered.HIGHEST_PRECEDENCE)
 @AllArgsConstructor
 @Slf4j
-public class AuditFilter extends OncePerRequestFilter {
+public class A extends OncePerRequestFilter {
 
     private static final int CACHE_LIMIT_60k = 64 * 1024;
 
@@ -27,7 +27,6 @@ public class AuditFilter extends OncePerRequestFilter {
     protected boolean shouldNotFilter(HttpServletRequest request) {
         return request.getHeader("skip-audit-filter") != null;
     }
-
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
