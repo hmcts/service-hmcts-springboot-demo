@@ -11,6 +11,8 @@ public interface AnswerRepository extends JpaRepository<AnswerEntity, Long> {
 
     long countDistinctByCaseId(UUID caseId);
 
+    List<AnswerEntity> findByCaseId(UUID caseId);
+
     // Sometimes using jpa query methods can be more complex than a simple query so we
     // can still query using the jpa objects but preferably NOT native queries
     @Query("select a from AnswerEntity a " +
