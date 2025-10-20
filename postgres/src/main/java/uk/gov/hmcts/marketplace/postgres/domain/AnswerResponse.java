@@ -9,8 +9,7 @@ import java.util.UUID;
 @Getter
 public class AnswerResponse {
 
-    private UUID queryId;
-    private String userQuery;
+    private long id;
+    private UUID caseId;
     private String answer;
-    private Integer version;
 }

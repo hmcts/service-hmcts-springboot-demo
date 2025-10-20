@@ -24,8 +24,10 @@ class AnswerControllerTest {
     @Test
     void root_controller_should_return_ok() {
         AnswerResponse answerResponse = AnswerResponse.builder().answer("Hello").build();
-        when(answerService.getAnswer()).thenReturn(answerResponse);
-        ResponseEntity<AnswerResponse> response = answerController.getAnswer();
+        when(answerService.getAnswer(21L)).thenReturn(answerResponse);
+
+        ResponseEntity<AnswerResponse> response = answerController.getAnswer(21L);
+
         assertThat(response.getStatusCode().value()).isEqualTo(200);
         assertThat(response.getBody().getAnswer()).isEqualTo("Hello");
     }

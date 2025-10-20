@@ -11,7 +11,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Entity
@@ -24,19 +23,10 @@ public class AnswerEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long answerId;
+    private long id;
 
     @NotNull
     private UUID caseId;
-    @NotNull
-    private UUID queryId;
-    @NotNull
-    private Long version;
 
-    private String answer;
-    private String llmInput;
-    private UUID docId;
-
-    @Builder.Default
-    private OffsetDateTime createdAt = OffsetDateTime.now();
+    private String answerText;
 }

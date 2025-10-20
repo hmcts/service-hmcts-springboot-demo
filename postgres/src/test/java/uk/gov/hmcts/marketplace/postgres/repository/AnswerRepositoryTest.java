@@ -10,9 +10,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import uk.gov.hmcts.marketplace.postgres.domain.AnswerEntity;
 
-import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -24,10 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class AnswerRepositoryTest {
 
     @Autowired
-    AnswerRepository answerNewRepository;
-
-    OffsetDateTime today = OffsetDateTime.now();
-    OffsetDateTime tomorrow = today.plusDays(1);
+    AnswerRepository answerRepository;
 
     @BeforeEach
     void beforeEach() {
@@ -36,62 +31,36 @@ class AnswerRepositoryTest {
 
     @Test
     void query_should_save_and_return_entity_by_id() {
-        AnswerEntity saved = answerNewRepository.save(newAnswer("the answer"));
-        AnswerEntity read = answerNewRepository.findById(saved.getAnswerId()).get();
-        assertThat(read.getAnswerId()).isNotNull();
-        assertThat(read.getCreatedAt()).isNotNull();
-        log.info("Saved and retrieved answer with id:{} and createdAt:{}", read.getAnswerId(), read.getCreatedAt());
+        AnswerEntity saved = answerRepository.save(newAnswer("the answer"));
+        AnswerEntity read = answerRepository.findById(saved.getId()).get();
+        assertThat(read.getId()).isNotNull();
+        assertThat(read.getAnswerText()).isEqualTo("the answer");
     }
 
     @Test
     void query_should_query_by_caseId() {
-        AnswerEntity saved = answerNewRepository.save(newAnswer("the answer"));
-        List<AnswerEntity> answers = answerNewRepository.findByCaseId(saved.getCaseId());
+        AnswerEntity saved = answerRepository.save(newAnswer("the answer"));
+        List<AnswerEntity> answers = answerRepository.queryExample(saved.getCaseId());
         assertThat(answers).hasSize(1);
     }
 
     @Test
-    void query_should_find_latest_for_caseId() {
-        AnswerEntity saved1 = answerNewRepository.save(newAnswer("answer1"));
-        AnswerEntity saved2 = answerNewRepository.save(newAnswer("answer2"));
-        Optional<AnswerEntity> answer1 = answerNewRepository.findFirstByQueryIdOrderByCreatedAtDesc(saved1.getQueryId());
-        assertThat(answer1.get().getAnswer()).isEqualTo("answer1");
-
-        Optional<AnswerEntity> answer2 = answerNewRepository.findFirstByQueryIdOrderByCreatedAtDesc(saved2.getQueryId());
-        assertThat(answer2.get().getAnswer()).isEqualTo("answer2");
-    }
-
-    @Test
     void query_should_get_count_for_queryId() {
-        AnswerEntity saved = answerNewRepository.save(newAnswer("answer1"));
-        long count = answerNewRepository.countDistinctByQueryId(saved.getQueryId());
-        assertThat(count).isEqualTo(1L);
-    }
-
-    @Test
-    void query_should_not_get_future_answer() {
-        AnswerEntity saved = answerNewRepository.save(newAnswer("answer1"));
-        List<AnswerEntity> result = answerNewRepository.findLatestBeforeGivenTime(saved.getCaseId(), saved.getQueryId(), today);
-        assertThat(result).hasSize(0);
-    }
-
-    @Test
-    void query_should_get_old_answer() {
-        AnswerEntity saved = answerNewRepository.save(newAnswer("answer1"));
-        List<AnswerEntity> result = answerNewRepository.findLatestBeforeGivenTime(saved.getCaseId(), saved.getQueryId(), tomorrow);
-        assertThat(result).hasSize(1);
+        AnswerEntity saved = answerRepository.save(newAnswer("answer1"));
+        AnswerEntity answer2 = newAnswer("answer2").toBuilder().caseId(saved.getCaseId()).build();
+        answerRepository.save(answer2);
+        long count = answerRepository.countDistinctByCaseId(saved.getCaseId());
+        assertThat(count).isEqualTo(2L);
     }
 
     private void clearDownData() {
-        answerNewRepository.deleteAll();
+        answerRepository.deleteAll();
     }
 
     private AnswerEntity newAnswer(String answer) {
         return AnswerEntity.builder()
                 .caseId(UUID.randomUUID())
-                .queryId(UUID.randomUUID())
-                .version(1L)
-                .answer(answer)
+                .answerText(answer)
                 .build();
     }
 }

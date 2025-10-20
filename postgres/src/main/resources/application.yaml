@@ -7,9 +7,9 @@ spring:
   jpa:
     open-in-view: false
   datasource:
-      url: ${CP_CDK_DATASOURCE_URL:jdbc:postgresql://localhost:5432/cdk}
-      username: ${CP_CDK_DATASOURCE_USERNAME:postgres}
-      password: ${CP_CDK_DATASOURCE_PASSWORD:postgres}
+      url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/postgres}
+      username: ${DATABASE_USERNAME:postgres}
+      password: ${DATABASE_PASSWORD:postgres}
   flyway:
     enabled: true
     locations: classpath:db/migration
