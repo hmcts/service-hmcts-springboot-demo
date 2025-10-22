@@ -15,7 +15,7 @@ public class AnswerService {
     private final AnswerMapper answerMapper;
 
     public AnswerResponse getAnswer(long answerId) {
-        AnswerEntity answerEntity = answerRepository.getById(answerId);
+        AnswerEntity answerEntity = answerRepository.getReferenceById(answerId);
         return answerMapper.mapAnswer(answerEntity);
     }
 }

@@ -38,19 +38,30 @@ class AnswerRepositoryTest {
     }
 
     @Test
-    void query_should_query_by_caseId() {
-        AnswerEntity saved = answerRepository.save(newAnswer("the answer"));
-        List<AnswerEntity> answers = answerRepository.queryExample(saved.getCaseId());
-        assertThat(answers).hasSize(1);
-    }
-
-    @Test
-    void query_should_get_count_for_queryId() {
+    void query_should_get_count_by_caseId() {
         AnswerEntity saved = answerRepository.save(newAnswer("answer1"));
         AnswerEntity answer2 = newAnswer("answer2").toBuilder().caseId(saved.getCaseId()).build();
         answerRepository.save(answer2);
+
         long count = answerRepository.countDistinctByCaseId(saved.getCaseId());
         assertThat(count).isEqualTo(2L);
+    }
+
+    @Test
+    void query_should_get_answers_by_caseId() {
+        AnswerEntity saved = answerRepository.save(newAnswer("answer1"));
+        AnswerEntity answer2 = newAnswer("answer2").toBuilder().caseId(saved.getCaseId()).build();
+        answerRepository.save(answer2);
+
+        List<AnswerEntity> answers = answerRepository.findByCaseId(saved.getCaseId());
+        assertThat(answers).hasSize(2);
+    }
+
+    @Test
+    void query_should_demonstrate_jpq_query_by_caseId() {
+        AnswerEntity saved = answerRepository.save(newAnswer("the answer"));
+        List<AnswerEntity> answers = answerRepository.queryExample(saved.getCaseId());
+        assertThat(answers).hasSize(1);
     }
 
     private void clearDownData() {

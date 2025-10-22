@@ -1,12 +1,15 @@
 # Postgres Best practice
 
-This module is a minimal demonstration using postgres in a springboot application
+This module is a minimal demonstration using jpa and postgres in a springboot application
 
 In particular
 * Using flyway to maintain the database schema for every level including spring boot tests
 * Using @TestContainer to access a docker postgres database for integration tests
 * Showing simple jpa Entity
 * Showing jpa query language NOT using native sql
+* Using mapstruct to easily map between the repository layer and the controller layer
+* Repository test to prove that the flyway creates a database schema that lines up with the jpa layer
+
 
 We need docker running with postgres database with a db user and password that line up
 with our connection settings in application.yml
