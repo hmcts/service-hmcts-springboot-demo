@@ -1,0 +1,9 @@
+services:
+  artemis:
+    image: apache/activemq-classic
+    environment:
+      ANONYMOUS_LOGIN: true
+    ports:
+      - "8161:8161"
+      - "61616:61616"
+    restart: unless-stopped

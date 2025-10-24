@@ -1,0 +1,51 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: audit-demo-service
+  artemis:
+    mode: native
+    broker-url: "tcp://localhost:61616"
+  jms:
+    pub-sub-domain: true
+    cache:
+      session-cache-size: 5
+  docker:
+    compose:
+      enabled: true
+      file: compose.yaml
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,info
+
+authz:
+  http:
+    enabled: true
+    identity-url-template: "http://localhost:${server.port}/usersgroups-query-api/query/api/rest/usersgroups/users/logged-in-user/permissions"
+    user-id-header: "CJSCPPUID"
+    action-header: "CPP-ACTION"
+    accept-header: "application/vnd.usersgroups.get-logged-in-user-permissions+json"
+    drools-classpath-pattern: "classpath:/acl/**/*.drl"
+    reload-on-each-request: true
+    action-required: false
+    deny-when-no-rules: true
+    group-aliases:
+      "Legal Advisers": "Legal Advisers"
+      "Prosecuting Authority Access": "Prosecuting Authority Access"
+    exclude-path-prefixes:
+      - "/usersgroups-query-api/"
+      - "/actuator"
+      - "/error"
+
+audit:
+  http:
+    enabled: true
+    openapi-rest-spec: "sample.openapi.yml"
+
+demo:
+  audit:
+    log-consumer: true

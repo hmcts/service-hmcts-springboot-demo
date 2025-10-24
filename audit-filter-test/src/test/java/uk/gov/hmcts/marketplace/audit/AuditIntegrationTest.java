@@ -1,4 +1,4 @@
-package uk.gov.hmcts.marketplace.audit.integration;
+package uk.gov.hmcts.marketplace.audit;
 
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -8,23 +8,25 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest()
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
 @Slf4j
-class AuditFilterIntegrationTest {
+class AuditIntegrationTest {
 
     @Resource
     private MockMvc mockMvc;
 
     @Test
-    void root_endpoint_should_return_ok() throws Exception {
+    void root_endpoint_should_be_audited() throws Exception {
         mockMvc
                 .perform(
                         get("/"))
+                .andDo(print())
                 .andExpect(status().isOk())
-                .andExpect(content().string("Hello world"));
+                .andExpect(content().string("Hello"));
     }
 }

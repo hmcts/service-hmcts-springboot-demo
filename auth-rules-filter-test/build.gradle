@@ -1,0 +1,20 @@
+plugins {
+    id 'application'
+    id 'java'
+}
+
+group = 'uk.gov.hmcts.cp'
+version = System.getProperty('ARTEFACT_VERSION') ?: '0.0.999'
+
+// ---- Repos (single place) ----
+repositories {
+    mavenLocal()
+    mavenCentral()
+    maven { url = "https://repo.spring.io/milestone" }  // Boot 4 M*
+    maven { url = 'https://pkgs.dev.azure.com/hmcts/Artifacts/_packaging/hmcts-lib/maven/v1' }
+}
+
+// ---- Dependencies ----
+dependencies {
+    implementation "uk.gov.hmcts.cp:cp-springboot-auth-rules-filter:1.0.1"
+}
