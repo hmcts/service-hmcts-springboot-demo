@@ -5,9 +5,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import uk.gov.hmcts.marketplace.postgres.config.TestContainersInitialise;
 import uk.gov.hmcts.marketplace.postgres.domain.AnswerEntity;
 
 import java.util.List;
@@ -15,9 +18,9 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@ExtendWith(SpringExtension.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@Testcontainers
+@ExtendWith(TestContainersInitialise.class)
+@ContextConfiguration(initializers = TestContainersInitialise.class)
 @Slf4j
 class AnswerRepositoryTest {
 
