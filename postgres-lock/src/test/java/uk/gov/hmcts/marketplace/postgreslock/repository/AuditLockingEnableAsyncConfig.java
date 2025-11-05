@@ -6,4 +6,5 @@ import org.springframework.scheduling.annotation.EnableAsync;
 @Configuration
 @EnableAsync
 public class AuditLockingEnableAsyncConfig {
+    // We need this to enable async processing ... so we can easily test hammering the postgres audits
 }
