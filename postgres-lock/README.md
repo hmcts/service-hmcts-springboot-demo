@@ -7,7 +7,7 @@ Useful for processing audit rows where it is likely that there may be multiple i
 processing the same table
 
 In summary, we use the following native postgres query to lock a data row
-"select * from audit limit 1 FOR UPDATE"
+"select * from audit order by id limit 1 FOR UPDATE"
 
 We prove it with an integration test that loads 100 Audit entries
 And then processes them Asynchronously
