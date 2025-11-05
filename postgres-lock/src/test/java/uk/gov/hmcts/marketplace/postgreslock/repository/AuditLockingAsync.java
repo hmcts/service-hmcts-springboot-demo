@@ -20,6 +20,7 @@ public class AuditLockingAsync {
     private AuditRepository auditRepository;
 
     private int auditsSent;
+    private int auditsNotFound;
 
     @SneakyThrows
     @Async
@@ -35,6 +36,7 @@ public class AuditLockingAsync {
             auditsSent++;
         } else {
             log.info("No audit found");
+            auditsNotFound++;
         }
     }
 }

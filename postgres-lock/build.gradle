@@ -20,7 +20,6 @@ repositories {
 
 ext {
   lombokVersion = "1.18.42"
-  mapstructVersion = "1.5.5.Final"
 }
 
 dependencies {

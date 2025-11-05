@@ -31,6 +31,7 @@ class AuditLockingRepositoryTest {
     }
 
     int numberOfAudits = 100;
+    int numberOfExtraChecks = 5;
 
     @SneakyThrows
     @AfterEach
@@ -40,6 +41,7 @@ class AuditLockingRepositoryTest {
         Thread.sleep(10000);
         log.info("Count After:{}", auditRepository.count());
         assertThat(auditLockingAsync.getAuditsSent()).isEqualTo(numberOfAudits);
+        assertThat(auditLockingAsync.getAuditsNotFound()).isEqualTo(numberOfExtraChecks);
     }
 
 
@@ -47,7 +49,7 @@ class AuditLockingRepositoryTest {
     void getNextAudit_should_lock_rows_exactly_100_sends() {
         insertAudits(numberOfAudits);
         log.info("Count Before:{}", auditRepository.count());
-        for (int n = 0; n < numberOfAudits + 10; n++) {
+        for (int n = 0; n < numberOfAudits + numberOfExtraChecks; n++) {
             auditLockingAsync.processAuditAsync();
         }
     }
