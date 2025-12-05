@@ -29,7 +29,7 @@ repositories {
 
 ext {
   lombokVersion = "1.18.42"
-  jupiterVersion = "6.0.0"
+  jupiterVersion = "6.0.1"
 }
 
 dependencies {
