@@ -10,8 +10,9 @@ import org.springframework.web.client.RestTemplate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class ActuatorHttpLiveTest {
+class ActuatorApiTest {
 
+    // Maybe we should use RestClient or WebClient in preference to RestTemplate ?
     private final String baseUrl = System.getProperty("app.baseUrl", "http://localhost:8082");
     private final RestTemplate http = new RestTemplate();
 
@@ -23,6 +24,6 @@ class ActuatorHttpLiveTest {
                 String.class
         );
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(res.getBody()).contains("\"status\":\"UPX\"");
+        assertThat(res.getBody()).contains("\"status\":\"UP\"");
     }
 }
