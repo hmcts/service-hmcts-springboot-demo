@@ -40,8 +40,7 @@ class AnswerIntegrationTest {
         AnswerEntity existingAnswer = insertAnswer();
         log.info("Saved answer with id:{}", existingAnswer.getId());
         mockMvc
-                .perform(
-                        get("/answer/" + existingAnswer.getId()))
+                .perform(get("/answer/{id}", existingAnswer.getId()))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("id").value(existingAnswer.getId()))
