@@ -13,37 +13,13 @@ apply{
   from("../gradle/spring-core.gradle")
   from("../gradle/spring-db.gradle")
 
+  from("../gradle/test.gradle")
+
   from("./gradle/docker.gradle")
   from("./gradle/api-test.gradle")
 }
 
-java {
-  toolchain {
-    languageVersion.set(JavaLanguageVersion.of(21))
-  }
-}
-
-repositories {
-  mavenCentral()
-}
-
-ext {
-  lombokVersion = "1.18.42"
-  mapstructVersion = "1.5.5.Final"
-}
-
 dependencies {
-  // We use lombok for lots of helper annotations such as @Slf4j, @Builder, @AllArgsConstructor
-  implementation "org.projectlombok:lombok:$lombokVersion"
-  annotationProcessor "org.projectlombok:lombok:$lombokVersion"
-  testAnnotationProcessor "org.projectlombok:lombok:$lombokVersion"
-
-  // MapStruct
-  implementation "org.mapstruct:mapstruct:$mapstructVersion"
-  annotationProcessor "org.mapstruct:mapstruct-processor:$mapstructVersion"
-}
-
-test {
-  useJUnitPlatform()
-  include '**/*Test.class'
+  // Good news we dont have any specific dependencies
+  // ... we just pulled in our common java-core and spring-core files above
 }
