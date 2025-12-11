@@ -2,7 +2,7 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: postgres
+      POSTGRES_DB: api-test-db
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
@@ -13,7 +13,7 @@ services:
       context: ../..
       dockerfile: api-test-demo/docker/Dockerfile
     environment:
-      DATASOURCE_URL: jdbc:postgresql://postgres:5432/postgres
+      DATASOURCE_URL: jdbc:postgresql://postgres:5432/api-test-db
       DATASOURCE_USERNAME: postgres
       DATASOURCE_PASSWORD: postgres
     depends_on:
