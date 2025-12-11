@@ -15,7 +15,6 @@ apply{
 
   from("../gradle/test.gradle")
 
-  from("./gradle/docker.gradle")
   from("./gradle/api-test.gradle")
 }
 
