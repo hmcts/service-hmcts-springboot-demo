@@ -1,7 +1,7 @@
 plugins {
     id("java")
     // Speak to Samir ... how set repository for spring boot 4
-    id("org.springframework.boot") version("3.5.8")
+    id("org.springframework.boot") version("4.0.0")
 }
 
 version = '1.0.0'
@@ -24,7 +24,7 @@ ext {
 
 dependencies {
     // Common spring boot dependencies
-    implementation(platform("org.springframework.boot:spring-boot-dependencies:3.5.8"))
+    implementation(platform("org.springframework.boot:spring-boot-dependencies:4.0.0"))
     implementation "org.springframework.boot:spring-boot-starter"
     implementation "org.springframework.boot:spring-boot-starter-web"
     testImplementation "org.springframework.boot:spring-boot-starter-test"
