@@ -3,8 +3,6 @@ package uk.gov.hmcts.cp.client;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.cloud.openfeign.EnableFeignClients;
-
 import org.wiremock.spring.ConfigureWireMock;
 import org.wiremock.spring.EnableWireMock;
 import uk.gov.hmcts.cp.model.DemoResponse;
@@ -14,16 +12,16 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
 @SpringBootTest
 @EnableWireMock({
-        @ConfigureWireMock(name = "demo-service", port = 0, filesUnderClasspath = "stubs",
+        @ConfigureWireMock(name = "demo-service", port = 0,
                 baseUrlProperties = "demo-service.url")
 })
-class DemoClientIT {
+class DemoClientIntegrationTest {
 
     @Autowired
     private DemoClient demoClient;
 
     @Test
-    void shouldReturnDemoById() {
+    void should_return_demo_by_id() {
 
         DemoResponse response = demoClient.getDemoById(1L);
 
@@ -34,7 +32,7 @@ class DemoClientIT {
     }
 
     @Test
-    void shouldThrowNotFoundWhenDemoDoesNotExist() {
+    void should_throw_not_found_when_demo_does_not_exist() {
         assertThatThrownBy(() -> demoClient.getDemoById(999L))
                 .isInstanceOf(feign.FeignException.NotFound.class);
     }

@@ -36,13 +36,8 @@ dependencyManagement {
 }
 
 dependencies {
-  implementation 'org.springframework.boot:spring-boot-starter-web'
   implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
 
-  // =========================
-  // WireMock (for tests)
-  // =========================
-  testImplementation 'org.springframework.boot:spring-boot-starter-test'
   testImplementation 'org.wiremock.integrations:wiremock-spring-boot:3.2.0'
   testRuntimeOnly "org.junit.platform:junit-platform-launcher"
 }
