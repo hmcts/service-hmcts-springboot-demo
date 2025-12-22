@@ -10,6 +10,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -27,4 +28,6 @@ public class AnswerEntity {
     private UUID caseId;
 
     private String answerText;
+
+    private List<String> eventTypes;
 }
