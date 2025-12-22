@@ -1,0 +1,32 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: http-client-demo
+
+# Base URLs for clients
+demo-service:
+  url: http://localhost:8081
+
+logging:
+  level:
+    com.example.demo.client: DEBUG
+    feign: DEBUG
+
+# Feign configuration
+feign:
+  client:
+    config:
+      default:
+        retryer:
+          period: 100
+          maxPeriod: 1000
+          maxAttempts: 3
+      demo-service:
+        connectTimeout: 3000
+        readTimeout: 3000
+        loggerLevel: basic
+
+
+
