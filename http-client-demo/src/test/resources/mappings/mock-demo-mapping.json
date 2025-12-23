@@ -8,6 +8,6 @@
     "headers": {
       "Content-Type": "application/json"
     },
-    "bodyFileName": "demo-response.json"
+    "bodyFileName": "mock-demo-response.json"
   }
 }

@@ -11,7 +11,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
 @SpringBootTest
-@EnableWireMock({@ConfigureWireMock(name = "demo-service", baseUrlProperties = "demo-service.url")})
+@EnableWireMock({@ConfigureWireMock(baseUrlProperties = "demo-service.url")})
 class DemoClientIntegrationTest {
 
     @Autowired
@@ -19,10 +19,7 @@ class DemoClientIntegrationTest {
 
     @Test
     void should_return_demo_by_id() {
-
         DemoResponse response = demoClient.getDemoById(1L);
-
-        assertThat(response).isNotNull();
         assertThat(response.getId()).isEqualTo(1L);
         assertThat(response.getName()).isEqualTo("Demo Name");
         assertThat(response.getEmail()).isEqualTo("demo@email.com");
