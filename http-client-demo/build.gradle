@@ -13,17 +13,8 @@ java {
   }
 }
 
-repositories {
-  mavenCentral()
-  maven {
-    url "https://repo.spring.io/milestone"
-  }
-  maven {
-    url "https://repo.spring.io/snapshot"
-  }
-}
-
 apply {
+  from("../gradle/repositories.gradle")
   from("../gradle/java-core.gradle")
   from("../gradle/test.gradle")
   from("../gradle/spring-core.gradle")
@@ -31,7 +22,7 @@ apply {
 
 dependencyManagement {
   imports {
-    mavenBom "org.springframework.cloud:spring-cloud-dependencies:2025.1.0-SNAPSHOT"
+    mavenBom "org.springframework.cloud:spring-cloud-dependencies:2025.1.0"
   }
 }
 
