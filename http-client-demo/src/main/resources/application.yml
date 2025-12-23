@@ -1,11 +1,2 @@
 demo-service:
   url: http://localhost:8081
-
-logging:
-  level:
-    com.example.demo.client: DEBUG
-    feign: DEBUG
-
-
-
-
