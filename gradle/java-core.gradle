@@ -11,7 +11,7 @@ repositories {
 ext {
   log4JVersion = "2.24.3"
   logbackVersion = "1.5.18"
-  lombokVersion = "1.18.38"
+  lombokVersion = "1.18.42"
   mapstructVersion = "1.5.5.Final"
 }
 
