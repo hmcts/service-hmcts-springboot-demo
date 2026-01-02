@@ -14,6 +14,8 @@ import uk.gov.hmcts.marketplace.postgres.config.TestContainersInitialise;
 import uk.gov.hmcts.marketplace.postgres.domain.AnswerEntity;
 import uk.gov.hmcts.marketplace.postgres.repository.AnswerRepository;
 
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -52,6 +54,8 @@ class AnswerIntegrationTest {
         AnswerEntity answerEntity = AnswerEntity.builder()
                 .caseId(UUID.randomUUID())
                 .answerText("The answer")
+                .hearingDate(LocalDate.of(2025,1,1))
+                .timestamp(Instant.now())
                 .build();
         return answerRepository.save(answerEntity);
     }

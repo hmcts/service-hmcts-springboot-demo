@@ -10,6 +10,8 @@ import org.springframework.test.context.ContextConfiguration;
 import uk.gov.hmcts.marketplace.postgres.config.TestContainersInitialise;
 import uk.gov.hmcts.marketplace.postgres.domain.AnswerEntity;
 
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -26,7 +28,7 @@ class AnswerRepositoryTest {
 
     @BeforeEach
     void beforeEach() {
-        clearDownData();
+        answerRepository.deleteAll();
     }
 
     @Test
@@ -64,14 +66,12 @@ class AnswerRepositoryTest {
         assertThat(answers).hasSize(1);
     }
 
-    private void clearDownData() {
-        answerRepository.deleteAll();
-    }
-
     private AnswerEntity newAnswer(String answer) {
         return AnswerEntity.builder()
                 .caseId(UUID.randomUUID())
                 .answerText(answer)
+                .hearingDate(LocalDate.of(2025, 1, 31))
+                .timestamp(Instant.now())
                 .build();
     }
 }
