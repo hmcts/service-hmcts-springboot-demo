@@ -14,7 +14,7 @@ import java.time.ZonedDateTime;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @Slf4j
-public class InstantTest {
+public class InstantBstTest {
 
     // We use Europe/London timezone to ensure it follows BST
     ZoneId zoneId = ZoneId.of("Europe/London");
@@ -24,7 +24,6 @@ public class InstantTest {
     void ten_thirty_in_winter_should_be_1030_utc_instant() {
         ZonedDateTime zdtWinter = ZonedDateTime.of(LocalDate.of(2020, 2, 20), time, zoneId);
         Instant instantWinter = zdtWinter.toInstant();
-        log.info("Winter time is:{}", instantWinter);
         assertThat(instantWinter.toString()).endsWith("10:30.00Z");
     }
 
@@ -32,7 +31,6 @@ public class InstantTest {
     void ten_thirty_in_summer_should_be_0930_utc_instant() {
         ZonedDateTime zdtSummer = ZonedDateTime.of(LocalDate.of(2020, 7, 20), time, zoneId);
         Instant instantSummer = zdtSummer.toInstant();
-        log.info("Summer time is:{}", instantSummer);
         assertThat(instantSummer.toString()).endsWith("09:30.00Z");
     }
 
