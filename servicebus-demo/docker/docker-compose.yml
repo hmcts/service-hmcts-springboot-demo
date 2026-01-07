@@ -21,7 +21,7 @@ services:
 
   # WARNING - See readme.md for running mssql on macbook with apple chip
   mssql:
-    image: "mcr.microsoft.com/mssql/server:2022-latest"
+    image: "mcr.microsoft.com/mssql/server:2025-latest"
     platform: linux/amd64
     networks:
       sb-emulator:
