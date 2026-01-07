@@ -1,8 +1,1 @@
-test {
-  useJUnitPlatform()
-  include '**/*Test.class'
-}
 
-dependencies {
-  testRuntimeOnly "org.junit.platform:junit-platform-launcher"
-}

@@ -19,7 +19,6 @@ repositories {
 
 apply {
   from("../gradle/java-core.gradle")
-  from("../gradle/test.gradle")
   from("../gradle/spring-core.gradle")
 }
 
