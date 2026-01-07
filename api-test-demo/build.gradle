@@ -13,9 +13,7 @@ apply{
   from("../gradle/spring-core.gradle")
   from("../gradle/spring-db.gradle")
 
-  from("../gradle/test.gradle")
-
-  from("./gradle/api-test.gradle")
+  from("../gradle/api-test.gradle")
 }
 
 dependencies {

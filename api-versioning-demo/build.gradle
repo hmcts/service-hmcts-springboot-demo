@@ -10,7 +10,6 @@ group = 'uk.gov.hmcts.marketplace'
 
 apply {
   from("../gradle/java-core.gradle")
-  from("../gradle/test.gradle")
   from("../gradle/spring-core.gradle")
   from("./gradle/openapi.gradle")
 }

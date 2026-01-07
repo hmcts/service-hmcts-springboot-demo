@@ -1,0 +1,53 @@
+tasks.register('sbTest', Test) {
+  description = "Runs service bus tests against docker-compose stack"
+  group = "Verification"
+
+  mustRunAfter tasks.named('test')
+
+  testClassesDirs = sourceSets.test.output.classesDirs
+  classpath = sourceSets.test.runtimeClasspath
+  useJUnitPlatform()
+
+  dependsOn tasks.composeUp
+  finalizedBy tasks.composeDown
+}
+
+tasks.named('check') {
+  dependsOn tasks.named('sbTest')
+}
+
+tasks.named('build') {
+  dependsOn tasks.named('test')
+  dependsOn tasks.named('sbTest')
+}
+
+sourceSets {
+  sbTest {
+    java {
+      compileClasspath += sourceSets.main.output
+      runtimeClasspath += sourceSets.main.output
+    }
+  }
+}
+
+configurations {
+  apiTestImplementation.extendsFrom testImplementation
+  apiTestRuntimeOnly.extendsFrom testRuntimeOnly
+}
+
+dockerCompose {
+  useComposeFiles = ['docker/docker-compose.yml']
+  startedServices = ['mssql','servicebus-emulator']
+
+  buildBeforeUp = true
+  waitForTcpPorts = true
+  upAdditionalArgs = ['--wait', '--wait-timeout', '120']
+
+  captureContainersOutput = true
+  removeOrphans = true
+  stopContainers = true
+  removeContainers = true
+
+  useDockerComposeV2 = true
+  dockerExecutable = 'docker'
+}
