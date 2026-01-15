@@ -1,11 +1,9 @@
-gradle
 bin/*
 !bin/run-in-docker.sh
 .gradle
 **/build/
 **/gradlew.bat
 **/generated
-!gradle/wrapper/gradle-wrapper.properties
 *.class
 .idea
 *.log
