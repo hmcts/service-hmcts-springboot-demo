@@ -9,9 +9,12 @@ jobs:
   Test:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
       - name: Actuator-Demo test
         run: |
           cd actuator-demo
-          ./gradle clean test
+          ./gradlew clean test
           cd ..
 
