@@ -14,8 +14,8 @@ jobs:
 
       - name: Actuator-Demo test
         run: |
-          find . -ls
           cd actuator-demo
+          find . -print -ls
           ./gradlew clean test
           cd ..
 

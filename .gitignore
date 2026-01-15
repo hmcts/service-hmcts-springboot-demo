@@ -3,7 +3,6 @@ bin/*
 !bin/run-in-docker.sh
 .gradle
 **/build/
-**/gradlew
 **/gradlew.bat
 **/generated
 !gradle/wrapper/gradle-wrapper.properties
