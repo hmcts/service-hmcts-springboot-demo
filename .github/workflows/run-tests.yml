@@ -19,3 +19,21 @@ jobs:
           ./gradlew clean test
           cd ..
 
+  Test-Modules:
+    name: Test Module ${{ matrix.module }}
+    strategy:
+      matrix:
+        module: [ actuator-demo, audit-filter-demo, auth-filter-demo ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Module tests
+        run: |
+          cd ${{ matrix.module }}
+          pwd
+          ./gradlew clean test
+          cd ..
+
+
