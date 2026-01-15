@@ -1,4 +1,4 @@
-name: CI Build and Publish
+name: Tests
 
 on:
   pull_request:
@@ -6,21 +6,8 @@ on:
       - main
 
 jobs:
-  Test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Actuator-Demo test
-        run: |
-          cd actuator-demo
-          find . -print -ls
-          ./gradlew clean test
-          cd ..
-
   Test-Modules:
-    name: Test Module ${{ matrix.module }}
+    name: Test ${{ matrix.module }}
     strategy:
       matrix:
         module: [ actuator-demo, audit-filter-demo, auth-filter-demo, postgres-springboot4 ]
