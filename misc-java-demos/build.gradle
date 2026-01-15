@@ -18,12 +18,13 @@ repositories {
 }
 
 apply {
-  from("../gradle/repositories.gradle")
   from("../gradle/java-core.gradle")
   from("../gradle/spring-core.gradle")
 }
 
 dependencies {
   testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+  // testImplementation("com.github.tomakehurst:wiremock:1.18")
+  testImplementation("com.github.tomakehurst:wiremock:3.0.0-beta-10")
 }
 
