@@ -1,7 +1,9 @@
 name: CI Build and Publish
 
 on:
-  workflow_call:
+  pull_request:
+    branches:
+      - main
 
 jobs:
   Test:
@@ -10,6 +12,6 @@ jobs:
       - name: Actuator-Demo test
         run: |
           cd actuator-demo
-          gradle clean test
+          ./gradle clean test
           cd ..
 
