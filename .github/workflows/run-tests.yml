@@ -1,0 +1,15 @@
+name: CI Build and Publish
+
+on:
+  workflow_call:
+
+jobs:
+  Test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Actuator-Demo test
+        run: |
+          cd actuator-demo
+          gradle clean test
+          cd ..
+
