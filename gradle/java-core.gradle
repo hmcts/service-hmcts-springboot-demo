@@ -38,3 +38,7 @@ dependencies {
   implementation "org.mapstruct:mapstruct:$mapstructVersion"
   annotationProcessor "org.mapstruct:mapstruct-processor:$mapstructVersion"
 }
+
+tasks.named('wrapper') {
+  delete "${projectDir}/gradlew.bat"
+}
