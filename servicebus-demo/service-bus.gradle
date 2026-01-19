@@ -1,28 +1,21 @@
-tasks.register('sbTest', Test) {
-  description = "Runs service bus tests against docker-compose stack"
+tasks.register('integrationTest', Test) {
+  description = "Runs integration / service bus tests against docker-compose stack"
   group = "Verification"
-
   mustRunAfter tasks.named('test')
 
   testClassesDirs = sourceSets.test.output.classesDirs
   classpath = sourceSets.test.runtimeClasspath
   useJUnitPlatform()
+  filter {
+    includeTestsMatching '*Integration*'
+  }
 
   dependsOn tasks.composeUp
   finalizedBy tasks.composeDown
 }
 
-tasks.named('check') {
-  dependsOn tasks.named('sbTest')
-}
-
-tasks.named('build') {
-  dependsOn tasks.named('test')
-  dependsOn tasks.named('sbTest')
-}
-
 sourceSets {
-  sbTest {
+  integrationTest {
     java {
       compileClasspath += sourceSets.main.output
       runtimeClasspath += sourceSets.main.output
@@ -31,8 +24,8 @@ sourceSets {
 }
 
 configurations {
-  apiTestImplementation.extendsFrom testImplementation
-  apiTestRuntimeOnly.extendsFrom testRuntimeOnly
+  integrationTestImplementation.extendsFrom testImplementation
+  integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
 }
 
 dockerCompose {

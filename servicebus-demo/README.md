@@ -15,5 +15,8 @@ We define a gradle task in service-bus.gradle
 The docker-compose for servicebus-emulator pulls in service-bus-config.json that defines the following
 service-bus components
 
+It takea approximately 60-90 seconds to run docker-compose
+The first time we run a service-bus to round trip messages it takes around 20 seconds
+Subsequent runs only take a second. Dont know why this is.
 
 
