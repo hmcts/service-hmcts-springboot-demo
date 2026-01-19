@@ -10,7 +10,7 @@ jobs:
     name: Test ${{ matrix.module }}
     strategy:
       matrix:
-        module: [ actuator-demo, audit-filter-demo, auth-filter-demo, postgres-springboot4 ]
+        module: [ actuator-demo, audit-filter-demo, auth-filter-demo, postgres-springboot4 servicebus-demo]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
