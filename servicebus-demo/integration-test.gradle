@@ -1,7 +1,6 @@
 tasks.register('integrationTest', Test) {
   description = "Runs integration / service bus tests against docker-compose stack"
   group = "Verification"
-  mustRunAfter tasks.named('test')
 
   testClassesDirs = sourceSets.test.output.classesDirs
   classpath = sourceSets.test.runtimeClasspath
@@ -12,6 +11,10 @@ tasks.register('integrationTest', Test) {
 
   dependsOn tasks.composeUp
   finalizedBy tasks.composeDown
+}
+
+tasks.named('test') {
+  dependsOn tasks.named('integrationTest')
 }
 
 sourceSets {
@@ -30,7 +33,7 @@ configurations {
 
 dockerCompose {
   useComposeFiles = ['docker/docker-compose.yml']
-  startedServices = ['mssql','servicebus-emulator']
+  startedServices = ['sqledge','servicebus-emulator']
 
   buildBeforeUp = true
   waitForTcpPorts = true
