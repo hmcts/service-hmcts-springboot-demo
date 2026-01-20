@@ -28,7 +28,7 @@ dependencyManagement {
 dependencies {
   implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
 
-  testImplementation 'org.wiremock.integrations:wiremock-spring-boot:3.10.6'
+  testImplementation 'org.wiremock.integrations:wiremock-spring-boot:4.0.9'
   testRuntimeOnly "org.junit.platform:junit-platform-launcher"
 }
 
