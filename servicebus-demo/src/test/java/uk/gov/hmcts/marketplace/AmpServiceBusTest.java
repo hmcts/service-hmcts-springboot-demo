@@ -1,7 +1,9 @@
 package uk.gov.hmcts.marketplace;
 
+import com.azure.core.util.BinaryData;
 import com.azure.core.util.IterableStream;
 import com.azure.messaging.servicebus.ServiceBusMessage;
+import com.azure.messaging.servicebus.ServiceBusReceivedMessage;
 import com.azure.messaging.servicebus.ServiceBusReceiverClient;
 import com.azure.messaging.servicebus.ServiceBusSenderClient;
 import org.junit.jupiter.api.Test;
@@ -14,6 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.hmcts.marketplace.service.AmpServiceBus;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -33,6 +36,8 @@ class AmpServiceBusTest {
 
     @Captor
     ArgumentCaptor<ServiceBusMessage> messageCaptor;
+    @Mock
+    ServiceBusReceivedMessage mockReceivedMessage;
 
     @Test
     void sb_should_send_messages() {
@@ -47,5 +52,20 @@ class AmpServiceBusTest {
         when(receiverClient.receiveMessages(2)).thenReturn(new IterableStream<>(new ArrayList<>()));
         List<String> messages = ampServiceBus.getMessages(2);
         assertThat(messages.size()).isEqualTo(0);
+        verify(receiverClient).close();
+    }
+
+    @Test
+    void sb_should_receive_messages() {
+        ArrayList<ServiceBusReceivedMessage> response = new ArrayList<>(Arrays.asList(mockReceivedMessage));
+        when(receiverClient.receiveMessages(2)).thenReturn(new IterableStream<>(response));
+        when(mockReceivedMessage.getBody()).thenReturn(BinaryData.fromString("My message"));
+
+        List<String> messages = ampServiceBus.getMessages(2);
+
+        assertThat(messages.size()).isEqualTo(1);
+        assertThat(messages.get(0)).isEqualTo("My message");
+        verify(receiverClient).complete(mockReceivedMessage);
+        verify(receiverClient).close();
     }
 }
