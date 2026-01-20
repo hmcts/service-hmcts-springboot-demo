@@ -1,0 +1,9 @@
+dependencies {
+  implementation 'org.springframework.boot:spring-boot-starter-web'
+  testImplementation "org.springframework.boot:spring-boot-starter-webmvc-test"
+  testImplementation(platform('org.junit:junit-bom:5.13.4'))
+  testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+  testImplementation('org.springframework.boot:spring-boot-starter-test')
+}
+//  testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+//  implementation 'org.springframework.boot:spring-boot-starter-validation'

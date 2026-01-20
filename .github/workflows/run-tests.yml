@@ -1,0 +1,28 @@
+name: Tests
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  Test-Modules:
+    name: Test ${{ matrix.module }}
+    strategy:
+      matrix:
+        module: [ actuator-demo, audit-filter-demo, auth-filter-demo,
+                  # clock-demo - Not work in pipeline. Oddly
+                  postgres-springboot4, servicebus-demo]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Module tests
+        run: |
+          cd ${{ matrix.module }}
+          pwd
+          ./gradlew clean test
+          cd ..
+
+

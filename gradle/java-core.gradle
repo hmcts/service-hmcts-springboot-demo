@@ -11,6 +11,8 @@ repositories {
 test {
   useJUnitPlatform()
   include '**/*Test.class'
+  exclude '**/*Integration*'
+  exclude '**/*IT*'
 }
 
 dependencies {
@@ -37,4 +39,8 @@ dependencies {
 
   implementation "org.mapstruct:mapstruct:$mapstructVersion"
   annotationProcessor "org.mapstruct:mapstruct-processor:$mapstructVersion"
+}
+
+tasks.named('wrapper') {
+  delete "${projectDir}/gradlew.bat"
 }

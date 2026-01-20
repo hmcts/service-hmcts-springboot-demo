@@ -1,0 +1,46 @@
+tasks.register('integrationTest', Test) {
+  description = "Runs integration / service bus tests against docker-compose stack"
+  group = "Verification"
+  mustRunAfter tasks.named('test')
+
+  testClassesDirs = sourceSets.test.output.classesDirs
+  classpath = sourceSets.test.runtimeClasspath
+  useJUnitPlatform()
+  filter {
+    includeTestsMatching '*Integration*'
+  }
+
+  dependsOn tasks.composeUp
+  finalizedBy tasks.composeDown
+}
+
+sourceSets {
+  integrationTest {
+    java {
+      compileClasspath += sourceSets.main.output
+      runtimeClasspath += sourceSets.main.output
+    }
+  }
+}
+
+configurations {
+  integrationTestImplementation.extendsFrom testImplementation
+  integrationTestRuntimeOnly.extendsFrom testRuntimeOnly
+}
+
+dockerCompose {
+  useComposeFiles = ['docker/docker-compose.yml']
+  startedServices = ['mssql','servicebus-emulator']
+
+  buildBeforeUp = true
+  waitForTcpPorts = true
+  upAdditionalArgs = ['--wait', '--wait-timeout', '120']
+
+  captureContainersOutput = true
+  removeOrphans = true
+  stopContainers = true
+  removeContainers = true
+
+  useDockerComposeV2 = true
+  dockerExecutable = 'docker'
+}

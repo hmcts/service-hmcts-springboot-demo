@@ -12,7 +12,7 @@ apply {
   from("../gradle/repositories.gradle")
   from("../gradle/java-core.gradle")
   from("../gradle/spring-core.gradle")
-  from("./service-bus.gradle")
+  from("./integration-test.gradle")
 }
 
 dependencies {

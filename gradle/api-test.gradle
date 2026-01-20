@@ -1,11 +1,11 @@
-tasks.register('sbTest', Test) {
-  description = "Runs service bus tests against docker-compose stack"
+tasks.register('api', Test) {
+  description = "Runs api tests against docker-compose stack"
   group = "Verification"
 
   mustRunAfter tasks.named('test')
 
-  testClassesDirs = sourceSets.test.output.classesDirs
-  classpath = sourceSets.test.runtimeClasspath
+  testClassesDirs = sourceSets.apiTest.output.classesDirs
+  classpath = sourceSets.apiTest.runtimeClasspath
   useJUnitPlatform()
 
   dependsOn tasks.composeUp
@@ -13,16 +13,16 @@ tasks.register('sbTest', Test) {
 }
 
 tasks.named('check') {
-  dependsOn tasks.named('sbTest')
+  dependsOn tasks.named('api')
 }
 
 tasks.named('build') {
   dependsOn tasks.named('test')
-  dependsOn tasks.named('sbTest')
+  dependsOn tasks.named('api')
 }
 
 sourceSets {
-  sbTest {
+  apiTest {
     java {
       compileClasspath += sourceSets.main.output
       runtimeClasspath += sourceSets.main.output
@@ -33,11 +33,16 @@ sourceSets {
 configurations {
   apiTestImplementation.extendsFrom testImplementation
   apiTestRuntimeOnly.extendsFrom testRuntimeOnly
+
+  // Ensure testRuntimeClasspath can be resolved for agent injection
+  testRuntimeClasspath {
+    canBeResolved = true
+  }
 }
 
 dockerCompose {
   useComposeFiles = ['docker/docker-compose.yml']
-  startedServices = ['mssql','servicebus-emulator']
+  startedServices = ['db', 'app']
 
   buildBeforeUp = true
   waitForTcpPorts = true
