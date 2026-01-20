@@ -10,9 +10,13 @@ jobs:
     name: Test ${{ matrix.module }}
     strategy:
       matrix:
-        module: [ actuator-demo, audit-filter-demo, auth-filter-demo,
+        module: [ actuator-demo,
+                  audit-filter-demo,
+                  auth-filter-demo,
                   # clock-demo - Not work in pipeline. Oddly
-                  postgres-springboot4, servicebus-demo]
+                  postgres-lock,
+                  postgres-springboot4,
+                  servicebus-demo]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
