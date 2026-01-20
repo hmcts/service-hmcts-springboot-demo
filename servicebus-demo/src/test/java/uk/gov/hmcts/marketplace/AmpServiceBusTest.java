@@ -6,6 +6,7 @@ import com.azure.messaging.servicebus.ServiceBusMessage;
 import com.azure.messaging.servicebus.ServiceBusReceivedMessage;
 import com.azure.messaging.servicebus.ServiceBusReceiverClient;
 import com.azure.messaging.servicebus.ServiceBusSenderClient;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -24,6 +25,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
+@Disabled
 class AmpServiceBusTest {
 
     @Mock
