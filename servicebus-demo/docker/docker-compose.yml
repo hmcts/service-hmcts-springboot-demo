@@ -1,5 +1,17 @@
 name: microsoft-azure-servicebus-emulator
 services:
+  # WARNING - See readme.md for running mssql on macbook with apple chip
+  mssql:
+    image: "mcr.microsoft.com/mssql/server:2022-latest"
+    platform: linux/amd64
+    networks:
+      sb-emulator:
+        aliases:
+          - "mssql"
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "Str0ngPassword!"
+
   servicebus-emulator:
     image: mcr.microsoft.com/azure-messaging/servicebus-emulator:latest
     volumes:
@@ -18,18 +30,6 @@ services:
       sb-emulator:
         aliases:
           - "sb-emulator"
-
-  # WARNING - See readme.md for running mssql on macbook with apple chip
-  mssql:
-    image: "mcr.microsoft.com/mssql/server:2022-latest"
-    platform: linux/amd64
-    networks:
-      sb-emulator:
-        aliases:
-          - "mssql"
-    environment:
-      ACCEPT_EULA: "Y"
-      MSSQL_SA_PASSWORD: "Str0ngPassword!"
 
 networks:
   sb-emulator:

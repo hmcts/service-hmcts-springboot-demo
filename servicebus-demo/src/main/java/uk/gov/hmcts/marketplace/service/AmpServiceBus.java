@@ -7,6 +7,7 @@ import com.azure.messaging.servicebus.ServiceBusSenderClient;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import uk.gov.hmcts.marketplace.config.ServiceBusConfigService;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,25 +16,19 @@ import java.util.List;
 @AllArgsConstructor
 @Service
 public class AmpServiceBus {
-    private static final String QUEUE_NAME = "queue.1";
+    public static final String QUEUE_NAME = "queue.1";
 
-    private final ServiceBusClientBuilder clientBuilder;
+    private final ServiceBusConfigService  serviceBusConfigService;
 
     public void sendMessage(String message) {
-        ServiceBusSenderClient sender = clientBuilder
-                .sender()
-                .queueName(QUEUE_NAME)
-                .buildClient();
+        ServiceBusSenderClient sender = serviceBusConfigService.serviceBusSender(QUEUE_NAME);
         sender.sendMessage(new ServiceBusMessage(message));
         log.info("Sent message to queue {}", QUEUE_NAME);
         sender.close();
     }
 
     public List<String> getMessages(int maxMessages) {
-        ServiceBusReceiverClient receiver = clientBuilder
-                .receiver()
-                .queueName(QUEUE_NAME)
-                .buildClient();
+        ServiceBusReceiverClient receiver = serviceBusConfigService.serviceBusReceiver(QUEUE_NAME);
         List<String> messages = new ArrayList<>();
         receiver.receiveMessages(maxMessages).forEach(msg -> {
             messages.add(String.valueOf(msg.getBody()));
