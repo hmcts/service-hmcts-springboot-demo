@@ -10,9 +10,9 @@ repositories {
 
 test {
   useJUnitPlatform()
-//  include '**/*Test.class'
-//  exclude '**/*Integration*'
-//  exclude '**/*IT*'
+  include '**/*Test.class'
+  exclude '**/*Integration*'
+  exclude '**/*IT*'
 }
 
 dependencies {

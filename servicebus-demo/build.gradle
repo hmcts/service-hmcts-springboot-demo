@@ -12,6 +12,7 @@ apply {
   from("../gradle/repositories.gradle")
   from("../gradle/java-core.gradle")
   from("../gradle/spring-core.gradle")
+  from("./unit-test.gradle")
   from("./integration-test.gradle")
 }
 
