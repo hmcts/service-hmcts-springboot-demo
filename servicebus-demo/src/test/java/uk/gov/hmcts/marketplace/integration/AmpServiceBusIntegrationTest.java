@@ -19,10 +19,11 @@ public class AmpServiceBusIntegrationTest {
 
     @Test
     void service_bus_should_spin_up_and_messages_pass_through() {
+        log.info("Sending messages to service bus");
         ampServiceBus.sendMessage("Message One");
         ampServiceBus.sendMessage("Message Two");
         List<String> messages = ampServiceBus.getMessages(2);
         assertThat(messages.get(0)).isEqualTo("Message One");
-        assertThat(messages.get(1)).isEqualTo("Message Two");
+        assertThat(messages.get(1)).isEqualTo("Message TwoX");
     }
 }

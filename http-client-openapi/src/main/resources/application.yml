@@ -1,2 +1,2 @@
-demo-service:
-  url: http://localhost:8081
+example-client:
+  basepath: ${BASEPATH:http://localhost:8090}

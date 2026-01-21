@@ -9,7 +9,20 @@ openApiGenerate {
   modelPackage = "uk.gov.hmcts.cp.openapi.model"
   typeMappings = ["OffsetDateTime": "Instant"]
   importMappings = ["java.time.OffsetDateTime": "java.time.Instant"]
+  generatorName = 'java'
   configOptions = [
-    library: "restclient",
+    library                             : 'restclient',
+    interfaceOnly                       : "true",
+    useSpringBoot3                      : "true",   // jakarta not javax
+    useTags                             : "true",   // use tag for api name
+    // generatedConstructorWithRequiredArgs: "false",  // else conflicts with lombok AllArgsConstructor
+    openApiNullable                     : "false",  // else generates classes JsonNullable imports
+    // additionalModelTypeAnnotations      : "@lombok.Builder;@lombok.AllArgsConstructor;@lombok.NoArgsConstructor",
+    generateClientAsBean: "true"
   ]
+}
+
+dependencies {
+  implementation 'com.fasterxml.jackson.core:jackson-databind:2.20.1'
+  implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.20.0'
 }
