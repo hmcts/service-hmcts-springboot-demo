@@ -24,6 +24,6 @@ public class AmpServiceBusIntegrationTest {
         ampServiceBus.sendMessage("Message Two");
         List<String> messages = ampServiceBus.getMessages(2);
         assertThat(messages.get(0)).isEqualTo("Message One");
-        assertThat(messages.get(1)).isEqualTo("Message TwoX");
+        assertThat(messages.get(1)).isEqualTo("Message Two");
     }
 }
