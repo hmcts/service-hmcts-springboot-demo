@@ -1,0 +1,2 @@
+example-client:
+  basepath: ${BASEPATH:http://localhost:8090}

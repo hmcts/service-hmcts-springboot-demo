@@ -1,0 +1,22 @@
+tasks.register('integrationTest', Test) {
+  description = "Runs unit tests only"
+  group = "Verification"
+
+  useJUnitPlatform()
+
+  include '**/*Integration*'
+  println("############### Integration Tests ##############")
+}
+
+tasks.named('test') {
+  dependsOn tasks.named('integrationTest')
+}
+
+sourceSets {
+  integrationTest {
+    java {
+      compileClasspath += sourceSets.main.output
+      runtimeClasspath += sourceSets.main.output
+    }
+  }
+}

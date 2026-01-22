@@ -3,85 +3,19 @@ plugins {
   id 'java'
   id 'org.springframework.boot' version '4.0.1'
   id 'io.spring.dependency-management' version '1.1.7'
-  id 'com.avast.gradle.docker-compose' version '0.17.20'
+  id 'com.avast.gradle.docker-compose' version '0.17.19'
 }
 
 group = 'uk.gov.hmcts.cp'
 version = System.getProperty('ARTEFACT_VERSION') ?: '0.0.999'
 
-repositories {
-  mavenCentral()
+apply {
+  from("../gradle/repositories.gradle")
+  from("../gradle/java-core.gradle")
+  from("../gradle/spring-core.gradle")
+  from("./unit-test.gradle")
+  from("./integration-test.gradle")
 }
-
-test {
-  useJUnitPlatform()
-  include '**/*Test.class'
-  exclude '**/*Integration*'
-  exclude '**/*IT*'
-
-  testLogging {
-    showStandardStreams = true
-  }
-}
-
-tasks.withType(Test).configureEach {
-  useJUnitPlatform()
-}
-
-dockerCompose {
-  useComposeFiles = ['docker/docker-compose.yml']
-  startedServices = ['wiremock']
-  buildBeforeUp = true
-  forceRecreate = true
-  removeOrphans = true
-  removeContainers = true
-  removeVolumes = true
-  waitForTcpPorts = true
-  upAdditionalArgs = ['--wait', '--wait-timeout', '180']
-  captureContainersOutput = true
-  useDockerComposeV2 = true
-  dockerExecutable = 'docker'
-}
-
-tasks.register('integrationTest', Test) {
-  description = "Runs integration tests against docker-compose stack"
-  group = "Verification"
-
-  filter {
-    includeTestsMatching '*Integration*'
-  }
-  useJUnitPlatform()
-
-  dependsOn tasks.composeUp
-  finalizedBy tasks.composeDown
-}
-sourceSets {
-  integrationTest {
-    java {
-      compileClasspath += sourceSets.main.output
-      runtimeClasspath += sourceSets.main.output
-    }
-  }
-}
-
-tasks.named('test') { dependsOn tasks.named('integrationTest') }
 
 dependencies {
-  implementation 'net.logstash.logback:logstash-logback-encoder:9.0'
-  implementation 'org.apache.logging.log4j:log4j-to-slf4j'
-  implementation 'ch.qos.logback:logback-classic'
-  implementation 'ch.qos.logback:logback-core'
-
-  compileOnly group: 'org.projectlombok', name: 'lombok', version: '1.18.42'
-  annotationProcessor group: 'org.projectlombok', name: 'lombok', version: '1.18.42'
-  testCompileOnly group: 'org.projectlombok', name: 'lombok', version: '1.18.42'
-  testAnnotationProcessor group: 'org.projectlombok', name: 'lombok', version: '1.18.42'
-
-  implementation "org.springframework.boot:spring-boot-starter-web"
-  implementation "org.springframework.boot:spring-boot-starter-aspectj"
-  implementation "org.springframework.boot:spring-boot-starter-actuator"
-  implementation "org.springframework.boot:spring-boot-starter-validation"
-
-  testImplementation "org.springframework.boot:spring-boot-starter-webmvc-test"
-  testImplementation "org.springframework.boot:spring-boot-starter-test"
 }

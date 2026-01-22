@@ -19,6 +19,7 @@ public class AmpServiceBusIntegrationTest {
 
     @Test
     void service_bus_should_spin_up_and_messages_pass_through() {
+        log.info("Sending messages to service bus");
         ampServiceBus.sendMessage("Message One");
         ampServiceBus.sendMessage("Message Two");
         List<String> messages = ampServiceBus.getMessages(2);
