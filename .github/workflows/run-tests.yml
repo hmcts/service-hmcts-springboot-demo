@@ -13,7 +13,7 @@ jobs:
         module: [ actuator-demo,
                   audit-filter-demo,
                   auth-filter-demo,
-                  http-client-openapi,
+                  openapi-client-demo,
                   # clock-demo - Not work in pipeline. Oddly
                   postgres-lock,
                   postgres-springboot4,
