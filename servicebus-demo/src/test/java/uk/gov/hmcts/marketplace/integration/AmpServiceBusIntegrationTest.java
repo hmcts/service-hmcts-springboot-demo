@@ -18,7 +18,10 @@ public class AmpServiceBusIntegrationTest {
     AmpServiceBus ampServiceBus;
 
     @Test
-    void service_bus_should_spin_up_and_messages_pass_through() {
+    void service_bus_should_spin_up_and_messages_pass_through() throws InterruptedException {
+        // Since--wait flag is removed to avoid healthcheck timeout, Added time for containers to start
+        log.info("Waiting for Service Bus emulator to be ready and queues to be created...");
+        Thread.sleep(60000);  // Wait 60 seconds for containers to start and queues to be created
         log.info("Sending messages to service bus");
         ampServiceBus.sendMessage("Message One");
         ampServiceBus.sendMessage("Message Two");
