@@ -6,12 +6,27 @@ services:
     # Use 2022 version - 2025 has compatibility issues with Rosetta on Apple Silicon
     # Error: assertion failed [x86_avx_state_ptr->xsave_header.xfeatures == kSupportedXFeatureBits]
     # MSSQL 2025 crashes immediately on Apple Silicon even with Rosetta enabled
-    image: "mcr.microsoft.com/mssql/server:2022-latest"
+    image: "mcr.microsoft.com/azure-sql-edge:latest"
     platform: linux/amd64
     networks:
       sb-emulator:
         aliases:
           - "mssql"
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "Str0ngPassword!"
+      MSSQL_PID: "Developer"
+    # Healthcheck removed for testing - Gradle plugin waits for healthchecks which fail on Apple Silicon
+    # Containers will start, tests will wait a bit before running
+
+  azure-sql-edge:
+    # Azure SQL Edge service for integration tests
+    image: "mcr.microsoft.com/azure-sql-edge:latest"
+    platform: linux/amd64
+    networks:
+      sb-emulator:
+        aliases:
+          - "azure-sql-edge"
     environment:
       ACCEPT_EULA: "Y"
       MSSQL_SA_PASSWORD: "Str0ngPassword!"
