@@ -1,0 +1,59 @@
+name: microsoft-azure-servicebus-emulator
+services:
+  # WARNING - See readme.md for running mssql on macbook with apple chip
+  # For Apple Silicon: Enable Rosetta in Docker Desktop Settings -> General
+  mssql:
+    # Use 2022 version - 2025 has compatibility issues with Rosetta on Apple Silicon
+    # Error: assertion failed [x86_avx_state_ptr->xsave_header.xfeatures == kSupportedXFeatureBits]
+    # MSSQL 2025 crashes immediately on Apple Silicon even with Rosetta enabled
+    image: "mcr.microsoft.com/azure-sql-edge:latest"
+    platform: linux/amd64
+    networks:
+      sb-emulator:
+        aliases:
+          - "mssql"
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "Str0ngPassword!"
+      MSSQL_PID: "Developer"
+    # Healthcheck removed for testing - Gradle plugin waits for healthchecks which fail on Apple Silicon
+    # Containers will start, tests will wait a bit before running
+
+  azure-sql-edge:
+    # Azure SQL Edge service for integration tests
+    image: "mcr.microsoft.com/azure-sql-edge:latest"
+    platform: linux/amd64
+    networks:
+      sb-emulator:
+        aliases:
+          - "azure-sql-edge"
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "Str0ngPassword!"
+      MSSQL_PID: "Developer"
+    # Healthcheck removed for testing - Gradle plugin waits for healthchecks which fail on Apple Silicon
+    # Containers will start, tests will wait a bit before running
+
+  servicebus-emulator:
+    image: mcr.microsoft.com/azure-messaging/servicebus-emulator:latest
+    volumes:
+      - "./service-bus-config.json:/ServiceBus_Emulator/ConfigFiles/Config.json"
+    ports:
+      - "5672:5672"
+      - "5300:5300"
+    environment:
+      SQL_SERVER: mssql
+      MSSQL_SA_PASSWORD: "Str0ngPassword!"
+      ACCEPT_EULA: "Y"
+      SQL_WAIT_INTERVAL: 60
+    depends_on:
+      mssql:
+        condition: service_started  # Changed from service_healthy - allows Service Bus to start even if healthcheck fails
+    networks:
+      sb-emulator:
+        aliases:
+          - "sb-emulator"
+
+networks:
+  sb-emulator:
+
