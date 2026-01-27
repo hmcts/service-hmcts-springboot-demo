@@ -48,29 +48,6 @@ docker logs -f microsoft-azure-servicebus-emulator-servicebus-emulator-1
 ### 2. Set Connection String
 export SERVICE_BUS_CONNECTION="Endpoint=sb://localhost;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;"
 
-### 3. Start the Application
-cd service-hmcts-springboot-demo/servicebus-demo
-./gradlew bootRun or Manually run Application.java
-
-## Testing Queue Operations
----------------------------
-
-# 1. Send a Message
-curl -X POST http://localhost:8080/test/queue/send \
-  -H "Content-Type: application/json" \
-  -d '{"message": "Hello from Service Bus!"}'
-
-# 2. Receive Messages
-curl "http://localhost:8080/test/queue/receive?maxMessages=10"
-
-# 3. Send & Receive
-curl -X POST http://localhost:8080/test/queue/send-and-receive \
-  -H "Content-Type: application/json" \
-  -d '{"message": "Quick Test"}'
-
-# 4. Health Check
-curl http://localhost:8080/test/queue/health
-
 ## Running Tests
 
 ### Unit Tests (No Emulator Needed)
