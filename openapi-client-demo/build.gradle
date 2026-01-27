@@ -26,6 +26,6 @@ apply {
 
 dependencies {
   testImplementation 'org.wiremock.integrations:wiremock-spring-boot:3.2.0'
-  testImplementation 'org.wiremock:wiremock-standalone:3.3.1'
+  testImplementation 'org.wiremock:wiremock-standalone:3.13.2'
 }
 
