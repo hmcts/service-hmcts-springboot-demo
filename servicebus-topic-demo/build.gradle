@@ -18,5 +18,5 @@ apply {
 
 dependencies {
   implementation("com.azure:azure-messaging-servicebus:7.17.16")
-  testImplementation("org.awaitility:awaitility:4.2.0")
+  testImplementation("org.awaitility:awaitility:4.3.0")
 }
