@@ -10,6 +10,7 @@ import uk.gov.hmcts.marketplace.service.TopicService;
 
 import java.util.Random;
 
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 @Slf4j
@@ -23,11 +24,15 @@ public class TopicIntegrationTest {
     ClientService clientService;
 
     @Test
-    void sent_message_should_process_and_send_to_client() {
+    void sent_message_should_process_and_send_to_two_clients() {
         String message = String.format("My message %04d", new Random().nextInt(100));
         topicService.sendMessage(message);
+        topicService.sendMessage(message);
 
-        topicService.processMessages(2);
-        verify(clientService).receiveMessage(message);
+        topicService.processMessages("subscription.1", 2);
+        verify(clientService, times(2)).receiveMessage("subscription.1", message);
+
+        topicService.processMessages("subscription.2", 2);
+        verify(clientService, times(2)).receiveMessage("subscription.2", message);
     }
 }

@@ -32,31 +32,32 @@ public class TopicService {
     }
 
     @SneakyThrows
-    public void processMessages(int processingSecs) {
-        ServiceBusProcessorClient processorClient = configService
+    public void processMessages(String subscriptionName, int processingSecs) {
+        ServiceBusProcessorClient processor = configService
                 .clientBuilder()
                 .processor()
                 .topicName("topic.1")
-                .subscriptionName("subscription.1")
-                .processMessage(context -> processMessage(context))
+                .subscriptionName(subscriptionName)
+                .processMessage(context -> processMessage(subscriptionName, context))
                 .processError(context -> processError(context))
                 .buildProcessorClient();
 
-        System.out.println("Starting the processor");
-        processorClient.start();
+        log.info("Starting processor {}", subscriptionName);
+        processor.start();
 
         TimeUnit.SECONDS.sleep(processingSecs);
-        System.out.println("Stopping and closing the processor");
-        processorClient.close();
+        log.info("Stopping processor {}", subscriptionName);
+        processor.close();
     }
 
-    private void processMessage(ServiceBusReceivedMessageContext context) {
+    private void processMessage(String subscriptionName, ServiceBusReceivedMessageContext context) {
         ServiceBusReceivedMessage message = context.getMessage();
         log.info("Processing messageId:{} {}", message.getMessageId(), message.getBody());
-        clientService.receiveMessage(String.valueOf(message.getBody()));
+        log.info("Message has deliveryCount:{}, timeToLive:{}", message.getDeliveryCount(), message.getTimeToLive());
+        clientService.receiveMessage(subscriptionName, String.valueOf(message.getBody()));
     }
 
-    private static void processError(ServiceBusErrorContext context) {
+    private void processError(ServiceBusErrorContext context) {
         // We need to properly handle the error ... leave it on the queue / send to DLQ
         log.error("error processing subscription message.", context.getException());
     }
