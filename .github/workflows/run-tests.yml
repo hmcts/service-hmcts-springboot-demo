@@ -14,10 +14,11 @@ jobs:
                   audit-filter-demo,
                   auth-filter-demo,
                   openapi-client-demo,
-                  # clock-demo - Not work in pipeline. Oddly
+          # clock-demo - Not work in pipeline. Oddly
                   postgres-lock,
                   postgres-springboot4,
-                  servicebus-demo]
+                  servicebus-queue-demo,
+                  servicebus-topic-demo ]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
