@@ -1,0 +1,10 @@
+server:
+  port: ${SERVER_PORT:8081}
+
+spring:
+  application:
+    name: notify-client
+
+client:
+  server-base-url: ${SERVER_BASE_URL:http://localhost:8080}
+  callback-url: ${CALLBACK_URL:http://localhost:8081/callback-notify}

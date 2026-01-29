@@ -1,0 +1,28 @@
+plugins {
+  id("java")
+  id 'org.springframework.boot' version '4.0.1'
+  id 'io.spring.dependency-management' version '1.1.7'
+  id 'org.openapi.generator' version '7.19.0'
+}
+
+version = '1.0.0'
+group = 'uk.gov.hmcts.marketplace'
+
+apply {
+  from("../../gradle/repositories.gradle")
+  from("../../gradle/java-core.gradle")
+  from("../../gradle/spring-core.gradle")
+  from("./unit-test.gradle")
+}
+
+dependencies {
+  developmentOnly 'org.springframework.boot:spring-boot-devtools'
+}
+
+openApiValidate {
+  inputSpec.set("src/main/resources/openapi/openapi-spec.yml")
+}
+
+tasks.named('check') {
+  dependsOn(tasks.openApiValidate)
+}

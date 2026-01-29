@@ -1,0 +1,262 @@
+openapi: 3.1.0
+info:
+  title: Subscription Service API
+  version: 1.0.0
+servers:
+  - url: https://{host}
+    variables:
+      host:
+        default: subscription.service.gov.uk
+
+paths:
+  /subscriptions:
+    post:
+      summary: Create a subscription (one-time HMAC secret reveal)
+      operationId: createSubscription
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSubscriptionRequest'
+      responses:
+        '201':
+          description: Created (returns HMAC secret once)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionCreateResponse'
+        '400':
+          description: Validation error
+        '409':
+          description: Subscription already exists
+
+  /subscriptions/{subscriptionId}:
+    get:
+      summary: Get subscription metadata (never returns secret)
+      operationId: getSubscription
+      parameters:
+        - in: path
+          name: subscriptionId
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Subscription metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionMetadataResponse'
+        '404':
+          description: Not found
+
+  /subscriptions/{subscriptionId}/hmac:
+    get:
+      summary: Get HMAC status (no secret)
+      operationId: getHmacStatus
+      parameters:
+        - in: path
+          name: subscriptionId
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: HMAC status/metadata (Phase 1 may return null expiry fields)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HmacStatus'
+        '404':
+          description: Not found
+
+  /subscriptions/{subscriptionId}/rotate-secret:
+    post:
+      summary: Rotate HMAC secret (manual, one-time reveal of new secret)
+      operationId: rotateSecret
+      parameters:
+        - in: path
+          name: subscriptionId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RotateSecretRequest'
+      responses:
+        '200':
+          description: Rotated (returns new secret once)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RotateSecretResponse'
+        '404':
+          description: Not found
+        '409':
+          description: Rotation not allowed (policy)
+
+components:
+  schemas:
+    CreateSubscriptionRequest:
+      type: object
+      required: [clientId, webhookUrl]
+      properties:
+        clientId:
+          type: string
+          example: client_abc
+        webhookUrl:
+          type: string
+          format: uri
+          example: https://client.example.com/notifications
+
+    SubscriptionCreateResponse:
+      type: object
+      required: [subscriptionId, clientId, webhookUrl, hmac]
+      properties:
+        subscriptionId:
+          type: string
+          example: sub_123
+        clientId:
+          type: string
+          example: client_abc
+        webhookUrl:
+          type: string
+          format: uri
+        hmac:
+          $ref: '#/components/schemas/HmacSecretOneTimeReveal'
+
+    SubscriptionMetadataResponse:
+      type: object
+      required: [subscriptionId, clientId, webhookUrl, hmac]
+      properties:
+        subscriptionId:
+          type: string
+        clientId:
+          type: string
+        webhookUrl:
+          type: string
+          format: uri
+        hmac:
+          $ref: '#/components/schemas/HmacMetadata'
+
+    HmacSecretOneTimeReveal:
+      description: Returned only on create/rotate. Never returned from GET endpoints.
+      type: object
+      required: [algorithm, keyId, secret]
+      properties:
+        algorithm:
+          type: string
+          example: HMAC-SHA256
+        keyId:
+          type: string
+          description: Your own key IDs kid_v1, kid_v2, ...
+          example: kid_v1
+        secret:
+          type: string
+          description: Base64-encoded secret (shown once only)
+          example: m7w8D0...base64...
+        createdAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Phase 1 may omit/null. Phase 2 populates.
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Phase 2 only (or null in Phase 1)
+        rotationRecommendedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Phase 2 only (or null in Phase 1)
+
+    HmacMetadata:
+      type: object
+      required: [algorithm, currentKeyId]
+      properties:
+        algorithm:
+          type: string
+          example: HMAC-SHA256
+        currentKeyId:
+          type: string
+          example: kid_v1
+
+    HmacStatus:
+      type: object
+      required: [algorithm, currentKeyId]
+      properties:
+        algorithm:
+          type: string
+          example: HMAC-SHA256
+        currentKeyId:
+          type: string
+          example: kid_v2
+        previousKeyId:
+          type: string
+          nullable: true
+          example: kid_v1
+        createdAt:
+          type: string
+          format: date-time
+          nullable: true
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+        rotationRecommendedAt:
+          type: string
+          format: date-time
+          nullable: true
+        gracePeriodEndsAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    RotateSecretRequest:
+      type: object
+      description: Optional rotation options (manual rotation only).
+      properties:
+        reason:
+          type: string
+          example: client_requested_rotation
+        overlapDays:
+          type: integer
+          nullable: true
+          description: Optional override. If omitted, use policy default.
+          example: 15
+
+    RotateSecretResponse:
+      type: object
+      required: [hmac]
+      properties:
+        hmac:
+          type: object
+          required: [algorithm, keyId, secret]
+          properties:
+            algorithm:
+              type: string
+              example: HMAC-SHA256
+            keyId:
+              type: string
+              example: kid_v2
+            secret:
+              type: string
+              description: Base64-encoded secret (shown once only)
+            createdAt:
+              type: string
+              format: date-time
+              nullable: true
+            expiresAt:
+              type: string
+              format: date-time
+              nullable: true
+            previousKeyId:
+              type: string
+              nullable: true
+              example: kid_v1
+            gracePeriodEndsAt:
+              type: string
+              format: date-time
+              nullable: true

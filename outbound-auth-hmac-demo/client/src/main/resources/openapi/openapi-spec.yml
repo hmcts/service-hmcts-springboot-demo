@@ -1,0 +1,121 @@
+openapi: 3.0.3
+info:
+  title: Notify Client API
+  description: |
+    Client that receives HMAC-authenticated notifications from the server.
+    - **POST /subscribe** – client calls server to register; server returns keyId and secret; client stores in local store only.
+    - **GET /secret** – get secret from client store only (no server call). Use rotate-secret if lost.
+    - **POST /rotate-secret** – client calls server to rotate; client stores new secret for future notifications.
+    - **POST /callback-notify** – called by the server with the notification payload and HMAC headers.
+  version: 1.0.0
+
+paths:
+  /secret:
+    get:
+      summary: Get secret from client store
+      description: Returns keyId and secret from the client's local store only. No server call. If lost, use POST /rotate-secret.
+      operationId: getSecret
+      tags:
+        - secret
+      parameters:
+        - name: keyId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Secret found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SecretResponse'
+        '404':
+          description: No secret for the given keyId in client store
+
+  /subscribe:
+    post:
+      summary: Subscribe for notifications
+      description: |
+        Client calls server to register (name, callbackUrl). Server generates keyId and secret,
+        returns them in the response; client stores in local store only. Server will POST to
+        /callback-notify with HMAC-signed notifications.
+      operationId: subscribe
+      tags:
+        - subscribe
+      parameters:
+        - name: name
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Subscriber name (included in server notification payload)
+      responses:
+        '202':
+          description: Accepted; returns keyId and secret; client stores them; server will call /callback-notify
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SecretResponse'
+
+  /rotate-secret:
+    post:
+      summary: Rotate secret
+      description: Client calls server to rotate the secret for keyId; client stores the new secret for future notifications.
+      operationId: rotateSecret
+      tags:
+        - secret
+      parameters:
+        - name: keyId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Secret rotated and stored
+
+  /callback-notify:
+    post:
+      summary: Receive notification (server callback)
+      description: |
+        Called by the server with the notification payload. Request must include
+        HMAC headers; the client verifies the signature and returns 401 if invalid.
+      operationId: callbackNotify
+      tags:
+        - callback
+      parameters:
+        - name: X-HMAC-Key-Id
+          in: header
+          required: true
+          schema:
+            type: string
+          description: Key ID used to look up the shared secret for verification
+        - name: X-HMAC-Signature
+          in: header
+          required: true
+          schema:
+            type: string
+          description: HMAC signature of the request (e.g. method, path, body)
+      requestBody:
+        required: false
+        content:
+          text/plain:
+            schema:
+              type: string
+              description: Notification payload from the server
+      responses:
+        '200':
+          description: Notification received and HMAC verified
+        '401':
+          description: Missing or invalid HMAC headers, or verification failed
+
+components:
+  schemas:
+    SecretResponse:
+      type: object
+      properties:
+        keyId:
+          type: string
+        secret:
+          type: string
