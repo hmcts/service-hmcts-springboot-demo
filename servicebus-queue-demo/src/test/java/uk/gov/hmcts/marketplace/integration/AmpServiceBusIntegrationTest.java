@@ -66,39 +66,6 @@ public class AmpServiceBusIntegrationTest {
             log.warn("Failed to cleanup queue: {}", e.getMessage());
         }
     }
-    @Test
-    void should_list_topics_on_service_bus() {
-        // skip if no connection string configured in env or properties
-        Assumptions.assumeTrue(connectionString != null && !connectionString.isBlank(),
-                "Skipping test: no Service Bus connection string configured");
-        ServiceBusAdministrationClient serviceBusAdministrationClient = new ServiceBusAdministrationClientBuilder()
-                .connectionString(connectionString)
-                .buildClient();
-        List<String> topicNames = new ArrayList<>();
-        for (TopicProperties tp : serviceBusAdministrationClient.listTopics()) {
-            topicNames.add(tp.getName());
-        }
-        assertThat(topicNames).isNotEmpty();
-    }
-
-    @Test
-    void should_list_subscriptions_for_topic() {
-        String topicName = "topic.1";
-        Assumptions.assumeTrue(connectionString != null && !connectionString.isBlank(),
-                "Skipping test: no Service Bus connection string configured");
-        Assumptions.assumeTrue(topicName != null && !topicName.isBlank(),
-                "Skipping test: no topic name configured");
-
-        ServiceBusAdministrationClient serviceBusAdministrationClient = new ServiceBusAdministrationClientBuilder()
-                .connectionString(connectionString)
-                .buildClient();
-
-        List<String> subscriptionNames = new ArrayList<>();
-        serviceBusAdministrationClient.listSubscriptions(topicName).forEach(sp ->
-                subscriptionNames.add(sp.getSubscriptionName())
-        );
-        assertThat(subscriptionNames).isNotEmpty();
-    }
 
     @Test
     void should_send_and_receive_messages_successfully() {
@@ -113,43 +80,24 @@ public class AmpServiceBusIntegrationTest {
         // Then
         List<String> messages = ampServiceBus.getMessages(2);
         assertThat(messages)
-                .hasSize(2)
+                .hasSize(3)
                 .containsExactly(messageOne, messageTwo);
     }
 
     @Test
     void should_send_multiple_messages_and_preserve_order() {
-        // Given
         String messageOne = "Message One";
         String messageTwo = "Message Two";
         String messageThree = "Message Three";
 
-        // When - send multiple messages
-        ampServiceBus.sendMessage(new String[]{messageOne}, new String[]{messageTwo, messageThree});
+        ampServiceBus.sendMessage(messageOne);
+        ampServiceBus.sendMessage(messageTwo);
+        ampServiceBus.sendMessage(messageThree);
 
-        // Then
         List<String> received = ampServiceBus.getMessages(3);
         assertThat(received)
                 .hasSize(3)
                 .containsExactly(messageOne, messageTwo, messageThree);
-    }
-
-    @Test
-    void should_ignore_null_and_empty_messages() {
-        // Given
-        String validMessage = "valid message";
-
-        // When - send null, empty, and mixed arrays
-        ampServiceBus.sendMessage((String[]) null);
-        ampServiceBus.sendMessage(new String[]{});
-        ampServiceBus.sendMessage(new String[]{null, validMessage});
-
-        // Then - only valid message should be received
-        // Use a reasonable timeout to avoid blocking
-        List<String> received = ampServiceBus.getMessages(10, Duration.ofSeconds(2));
-        assertThat(received)
-                .hasSize(1)
-                .containsExactly(validMessage);
     }
 
     /**

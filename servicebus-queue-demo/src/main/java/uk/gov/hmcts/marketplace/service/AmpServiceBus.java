@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import uk.gov.hmcts.marketplace.config.ServiceBusConfigService;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -28,19 +29,8 @@ public class AmpServiceBus {
         sender.close();
     }
 
-    public void sendMessage(String[]... messages) {
-        if (messages == null) {
-            return;
-        }
-        Arrays.stream(messages)
-                .filter(Objects::nonNull)
-                .flatMap(Arrays::stream)
-                .filter(Objects::nonNull)
-                .forEach(this::sendMessage);
-    }
-
     public List<String> getMessages(int maxMessages) {
-        return getMessages(maxMessages, java.time.Duration.ofSeconds(2));
+        return getMessages(maxMessages, Duration.ofSeconds(2));
     }
 
     public List<String> getMessages(int maxMessages, java.time.Duration maxWaitTime) {
