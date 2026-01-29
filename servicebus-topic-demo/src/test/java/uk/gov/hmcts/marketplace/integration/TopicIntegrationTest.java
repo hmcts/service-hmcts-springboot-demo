@@ -1,6 +1,7 @@
 package uk.gov.hmcts.marketplace.integration;
 
 import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -8,8 +9,11 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import uk.gov.hmcts.marketplace.service.ClientService;
 import uk.gov.hmcts.marketplace.service.TopicService;
 
+import java.time.Duration;
 import java.util.Random;
 
+import static org.awaitility.Awaitility.await;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 @Slf4j
@@ -22,12 +26,34 @@ public class TopicIntegrationTest {
     @MockitoBean
     ClientService clientService;
 
+    @BeforeEach
+    void setUp() {
+        await()
+                .atMost(Duration.ofSeconds(60))
+                .pollInterval(Duration.ofSeconds(1))
+                .until(this::isServiceBusReady);
+    }
+
     @Test
-    void sent_message_should_process_and_send_to_client() {
+    void sent_message_should_process_and_send_to_two_clients() {
         String message = String.format("My message %04d", new Random().nextInt(100));
         topicService.sendMessage(message);
+        topicService.sendMessage(message);
 
-        topicService.processMessages(2);
-        verify(clientService).receiveMessage(message);
+        topicService.processMessages("subscription.1", 2);
+        verify(clientService, times(2)).receiveMessage("subscription.1", message);
+
+        topicService.processMessages("subscription.2", 2);
+        verify(clientService, times(2)).receiveMessage("subscription.2", message);
+    }
+
+    private boolean isServiceBusReady() {
+        try {
+            topicService.processMessages("subscription.1", 1);
+            return true;
+        } catch (Exception e) {
+            log.info("waiting for servicebus to start");
+            return false;
+        }
     }
 }
