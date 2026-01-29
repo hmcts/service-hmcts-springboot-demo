@@ -9,32 +9,13 @@ tasks.register('integrationTest', Test) {
     includeTestsMatching '*Integration*'
   }
 
-  // Enable test output and logging
-  testLogging {
-    events "passed", "skipped", "failed", "standardOut", "standardError"
-    exceptionFormat "full"
-    showStandardStreams = true
-    showExceptions = true
-    showCauses = true
-    showStackTraces = true
-  }
-
-  // Output to console
-  outputs.upToDateWhen { false }
-
-  // Print test results
-  afterSuite { desc, result ->
-    if (!desc.parent) {
-      println "\nTest Results: ${result.resultType} (${result.testCount} tests, ${result.successfulTestCount} passed, ${result.failedTestCount} failed, ${result.skippedTestCount} skipped)"
-    }
-  }
-
   dependsOn tasks.composeUp
   finalizedBy tasks.composeDown
 }
 
-// Regular 'test' task should NOT depend on integrationTest. This allows unit tests to run without Docker
-// Only run integrationTest explicitly when you need Docker
+tasks.named('test') {
+  dependsOn tasks.named('integrationTest')
+}
 
 sourceSets {
   integrationTest {
@@ -51,17 +32,12 @@ configurations {
 }
 
 dockerCompose {
-  // Use test-specific compose file without healthchecks (Gradle plugin waits for healthchecks which fail on Apple Silicon)
   useComposeFiles = ['docker/docker-compose.yml']
   startedServices = ['sqledge','servicebus-emulator']
 
-  // Don't wait for TCP ports or healthchecks - as they are failing on Apple Silicon
-  // Containers will start, and tests will wait a bit before running
-  waitForTcpPorts = false
-
-  // Remove --wait flag - it waits for healthchecks which fail on Apple Silicon
-  // Containers will start immediately, tests will handle readiness checks
-  upAdditionalArgs = []  // Removed --wait to avoid healthcheck timeout
+  buildBeforeUp = true
+  waitForTcpPorts = true
+  upAdditionalArgs = ['--wait', '--wait-timeout', '120']
 
   captureContainersOutput = true
   removeOrphans = true
