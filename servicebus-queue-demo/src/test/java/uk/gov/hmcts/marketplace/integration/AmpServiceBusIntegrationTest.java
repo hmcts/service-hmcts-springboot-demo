@@ -19,6 +19,7 @@ import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 @Slf4j
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -26,22 +27,10 @@ public class AmpServiceBusIntegrationTest {
 
     @Autowired
     AmpServiceBus ampServiceBus;
-
-    @Value("${spring.cloud.azure.servicebus.connection-string:${AZURE_SERVICEBUS_CONNECTION_STRING:}}")
-    private String connectionString;
-
-    private static final Duration SERVICE_BUS_READY_TIMEOUT = Duration.ofSeconds(120);
-    private static final Duration POLL_INTERVAL = Duration.ofSeconds(1);
-
-    @BeforeEach
-    void setUp() {
-        // Wait for Service Bus to be ready before running tests
         await()
                 .atMost(SERVICE_BUS_READY_TIMEOUT)
                 .pollInterval(POLL_INTERVAL)
                 .until(this::isServiceBusReady);
-        // Clean up any health check messages left in the queue
-        cleanupQueue();
     }
 
     /**
@@ -101,14 +90,17 @@ public class AmpServiceBusIntegrationTest {
     }
 
     /**
-     * Checks if Service Bus is ready by attempting to send a test message.
-     * Returns true if sending succeeds, false otherwise.
      */
-    private boolean isServiceBusReady() {
+    private boolean isInitialized() {
         try {
-            String testMessage = "health-check";
+            String testMessage = "health-check-" + System.currentTimeMillis();
             ampServiceBus.sendMessage(testMessage);
-            return true;
+            List<String> messages = ampServiceBus.getMessages(1);
+            boolean isServiceBusInitialised = !messages.isEmpty() && messages.get(0).equals(testMessage);
+            if (isServiceBusInitialised) {
+                log.debug("Service Bus is ready");
+            }
+            return isServiceBusInitialised;
         } catch (Exception e) {
             return false;
         }
