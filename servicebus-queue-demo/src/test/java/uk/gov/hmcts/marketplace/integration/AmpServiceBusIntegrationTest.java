@@ -1,16 +1,18 @@
 package uk.gov.hmcts.marketplace.integration;
 
 import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import uk.gov.hmcts.marketplace.service.AmpServiceBus;
 
+import java.time.Duration;
 import java.util.List;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
-import static java.util.concurrent.TimeUnit.SECONDS;
 
 @Slf4j
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -19,38 +21,36 @@ public class AmpServiceBusIntegrationTest {
     @Autowired
     AmpServiceBus ampServiceBus;
 
-    @Test
-    void service_bus_should_spin_up_and_messages_pass_through() {
-        // Wait for Service Bus emulator to be ready and queues to be created
-        log.info("Waiting for Service Bus emulator to be ready and queues to be created...");
+    @BeforeEach
+    void beforeEach() {
         await()
-            .atMost(120, SECONDS)
-            .pollInterval(1, SECONDS)
-            .until(this::isInitialized);
-        log.info("Service Bus is ready. Sending messages to service bus");
-        ampServiceBus.sendMessage("Message One");
-        ampServiceBus.sendMessage("Message Two");
-        List<String> messages = ampServiceBus.getMessages(2);
-        assertThat(messages.get(0)).isEqualTo("Message One");
-        assertThat(messages.get(1)).isEqualTo("Message Two");
+                .atMost(Duration.ofSeconds(60))
+                .pollInterval(Duration.ofSeconds(1))
+                .until(this::isServiceBusReady);
     }
 
-    /**
-     * Checks if Service Bus is ready by attempting to send and receive a test message.
-     * Returns true if the operation succeeds, false otherwise.
-     */
-    private boolean isInitialized() {
+    @Test
+    void should_send_multiple_messages_and_preserve_order() {
+        String messageOne = "Message One";
+        String messageTwo = "Message Two";
+        String messageThree = "Message Three";
+
+        ampServiceBus.sendMessage(messageOne);
+        ampServiceBus.sendMessage(messageTwo);
+        ampServiceBus.sendMessage(messageThree);
+
+        List<String> received = ampServiceBus.getMessages(3);
+        assertThat(received)
+                .hasSize(3)
+                .containsExactly(messageOne, messageTwo, messageThree);
+    }
+
+    private boolean isServiceBusReady() {
         try {
-            String testMessage = "health-check-" + System.currentTimeMillis();
-            ampServiceBus.sendMessage(testMessage);
-            List<String> messages = ampServiceBus.getMessages(1);
-            boolean isServiceBusInitialised = !messages.isEmpty() && messages.get(0).equals(testMessage);
-            if (isServiceBusInitialised) {
-                log.debug("Service Bus is ready");
-            }
-            return isServiceBusInitialised;
+            ampServiceBus.getMessages(1);
+            return true;
         } catch (Exception e) {
-            log.debug("Service Bus not ready yet: {}", e.getMessage());
+            log.info("waiting for servicebus to start");
             return false;
         }
     }

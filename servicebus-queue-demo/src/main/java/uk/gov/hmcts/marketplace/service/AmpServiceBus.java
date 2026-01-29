@@ -8,8 +8,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import uk.gov.hmcts.marketplace.config.ServiceBusConfigService;
 
+import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 @Slf4j
 @AllArgsConstructor
@@ -27,14 +30,21 @@ public class AmpServiceBus {
     }
 
     public List<String> getMessages(int maxMessages) {
+        return getMessages(maxMessages, Duration.ofSeconds(2));
+    }
+
+    public List<String> getMessages(int maxMessages, java.time.Duration maxWaitTime) {
         ServiceBusReceiverClient receiver = serviceBusConfigService.serviceBusReceiver(QUEUE_NAME);
         List<String> messages = new ArrayList<>();
-        receiver.receiveMessages(maxMessages).forEach(msg -> {
-            messages.add(String.valueOf(msg.getBody()));
-            receiver.complete(msg);
-        });
-        receiver.close();
-        log.info("Read {} messages from queue {}", messages.size(), QUEUE_NAME);
+        try {
+            receiver.receiveMessages(maxMessages, maxWaitTime).forEach(msg -> {
+                messages.add(String.valueOf(msg.getBody()));
+                receiver.complete(msg);
+            });
+        } finally {
+            receiver.close();
+        }
+        log.debug("Read {} messages from queue {}", messages.size(), QUEUE_NAME);
         return messages;
     }
 }

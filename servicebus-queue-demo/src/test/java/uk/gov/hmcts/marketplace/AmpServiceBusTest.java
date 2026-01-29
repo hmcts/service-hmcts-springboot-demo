@@ -16,6 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.hmcts.marketplace.config.ServiceBusConfigService;
 import uk.gov.hmcts.marketplace.service.AmpServiceBus;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -54,8 +55,8 @@ class AmpServiceBusTest {
     @Test
     void sb_should_receive_empty_messages() {
         when(serviceBusConfigService.serviceBusReceiver(QUEUE_NAME)).thenReturn(receiverClient);
-        when(receiverClient.receiveMessages(2)).thenReturn(new IterableStream<>(new ArrayList<>()));
-        List<String> messages = ampServiceBus.getMessages(2);
+        when(receiverClient.receiveMessages(2, Duration.ofSeconds(2))).thenReturn(new IterableStream<>(new ArrayList<>()));
+        List<String> messages = ampServiceBus.getMessages(2, Duration.ofSeconds(2));
         assertThat(messages.size()).isEqualTo(0);
         verify(receiverClient).close();
     }
@@ -64,7 +65,7 @@ class AmpServiceBusTest {
     void sb_should_receive_messages() {
         when(serviceBusConfigService.serviceBusReceiver(QUEUE_NAME)).thenReturn(receiverClient);
         ArrayList<ServiceBusReceivedMessage> response = new ArrayList<>(Arrays.asList(mockReceivedMessage));
-        when(receiverClient.receiveMessages(2)).thenReturn(new IterableStream<>(response));
+        when(receiverClient.receiveMessages(2, Duration.ofSeconds(2))).thenReturn(new IterableStream<>(response));
         when(mockReceivedMessage.getBody()).thenReturn(BinaryData.fromString("My message"));
 
         List<String> messages = ampServiceBus.getMessages(2);
