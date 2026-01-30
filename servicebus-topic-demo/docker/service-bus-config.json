@@ -15,7 +15,7 @@
                             {
                                 "Name": "subscription.1",
                                 "Properties": {
-                                    "DeadLetteringOnMessageExpiration": false,
+                                    "DeadLetteringOnMessageExpiration": true,
                                     "DefaultMessageTimeToLive": "PT1H",
                                     "LockDuration": "PT1M",
                                     "MaxDeliveryCount": 3,
@@ -27,7 +27,7 @@
                             {
                                 "Name": "subscription.2",
                                 "Properties": {
-                                    "DeadLetteringOnMessageExpiration": false,
+                                    "DeadLetteringOnMessageExpiration": true,
                                     "DefaultMessageTimeToLive": "PT1H",
                                     "LockDuration": "PT1M",
                                     "MaxDeliveryCount": 3,

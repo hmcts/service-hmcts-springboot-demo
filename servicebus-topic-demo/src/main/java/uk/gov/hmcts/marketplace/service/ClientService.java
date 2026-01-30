@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class ClientService {
 
-    public void receiveMessage(String subscriptionName, String message) {
-        log.info("ClientService {} received message:{}", subscriptionName, message);
+    public void receiveMessage(String topicName, String subscriptionName, String message) {
+        log.info("ClientService received message:{} for {}/{}", message, topicName, subscriptionName);
     }
 }

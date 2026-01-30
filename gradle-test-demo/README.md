@@ -1,9 +1,30 @@
 # Demo to illustrate how we setup gradle to run our tests
 
+We have 4 types of Test in our application, plus apiTest which is outside our application
+
+## unitTest - A lightweight test typically testing across a single layer that mocks the underlying layer.
+i.e. Controller test mocks the service layer and calls all exposed methods in the controller.
+The unitTest should test all code branches
+
+## unitSpringBootTest / repositoryTest- A unit test that requires spring boot stack because of inherent complexities
+i.e. Jpa repository needs to integrate tightly with postgres running as @TestContainer and flyway
+Unit tests are difficult and maybe pointless.
+We need to ensure that we test that the jpa repository, entities and flyway created postgres tables all line up
+Any changes to flyway are tested by the repository tests
+We may have just a simple repository test that saves a jpa entity to postgres database table and then reads back the entity
+i.e. where we just default repository methods such as save() and findById() then a simple repository test is sufficient
+We do require repository tests for any custom SQL  
+
+## integrationTest - SpringBoot test without docker
+integrationDockerTest ( with docker compose up )
+
 We need the different test types to 
 a) Run on selection in intellij
 b) Show logging ( from app and tests )
 c) Run for the correct gradle task i.e. "gradle test" "gradle integrationTest"
+
+
+## dockerTest - An spring boot integration test that requires docker stack
 
 
 1) Unit tests 
