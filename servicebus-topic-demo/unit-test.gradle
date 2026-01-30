@@ -1,6 +1,6 @@
 test {
   useJUnitPlatform()
   include '**/*Test.class'
-//  exclude '**/*Integration*'
-//  exclude '**/*IT*'
+  exclude '**/*Integration*'
+  exclude '**/*IT*'
 }
