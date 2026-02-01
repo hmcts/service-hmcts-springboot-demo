@@ -37,23 +37,12 @@ public class TopicIntegrationTest extends TopicIntegrationTestBase {
 
     @BeforeEach
     void setUp() {
-        log.info("START BEFORE");
         await()
                 .atMost(Duration.ofSeconds(60))
                 .pollInterval(Duration.ofSeconds(1))
                 .until(this::isServiceBusReady);
-//        System.out.println("COUNTING messages");
-//        log.info("Sub1 Count:{}", countMessages(topicName, subscription1));
-//        log.info("Sub1 DLQ Count:{}", countDeadLetterMessages(topicName, subscription1));
-        System.out.println("PURGING messages");
         purgeMessages(topicName, subscription1);
         purgeMessages(topicName, subscription2);
-
-//        assertThat(countMessages(topicName, subscription1)).isZero();
-//        assertThat(countDeadLetterMessages(topicName, subscription1)).isZero();
-//        assertThat(countMessages(topicName, subscription2)).isZero();
-//        assertThat(countDeadLetterMessages(topicName, subscription2)).isZero();
-        log.info("Done BEFORE");
     }
 
     @Test
@@ -76,7 +65,7 @@ public class TopicIntegrationTest extends TopicIntegrationTestBase {
         String message2 = randomMessage();
         topicService.sendMessage(topicName, message2);
 
-        topicService.processMessages(topicName, subscription1, 100);
+        topicService.processMessages(topicName, subscription1, 500);
 
         verify(clientService).receiveMessage(topicName, subscription1, message1);
         verify(clientService).receiveMessage(topicName, subscription1, message2);
@@ -84,19 +73,12 @@ public class TopicIntegrationTest extends TopicIntegrationTestBase {
 
     @Test
     void process_message_should_retry_n_times_then_send_to_DLQ() {
-        System.out.println("SENDING message");
         topicService.sendMessage(topicName, message);
-        System.out.println("COUNTING message");
-//        assertThat(countMessages(topicName, subscription1)).isEqualTo(1L);
-//        assertThat(countMessages(topicName, subscription1)).isEqualTo(1L);
 
         log.info("getting messages ... {} sends and then should fail to DLQ", maxDeliveryCount);
         doThrow(HttpClientErrorException.class).when(clientService).receiveMessage(topicName, subscription1, message);
         topicService.processMessages(topicName, subscription1, 500);
         verify(clientService, times(maxDeliveryCount)).receiveMessage(topicName, subscription1, message);
-//        assertThat(countMessages(topicName, subscription1)).isEqualTo(0L);
-//        assertThat(countDeadLetterMessages(topicName, subscription1)).isEqualTo(1L);
-//        assertThat(countDeadLetterMessages(topicName, subscription1)).isEqualTo(1L);
 
         log.info("reprocessing messages from DLQ just once");
         reset(clientService);
@@ -106,14 +88,10 @@ public class TopicIntegrationTest extends TopicIntegrationTestBase {
 
     @Test
     void dlq_count_should_be_accurate() {
-//        assertThat(countDeadLetterMessages(topicName, subscription1)).isZero();
-
         doThrow(HttpClientErrorException.class).when(clientService).receiveMessage(topicName, subscription1, message);
         topicService.sendMessage(topicName, message);
         topicService.processMessages(topicName, subscription1, 500);
         verify(clientService, times(maxDeliveryCount)).receiveMessage(topicName, subscription1, message);
-
-//        assertThat(countDeadLetterMessages(topicName, subscription1)).isEqualTo(1);
     }
 
 

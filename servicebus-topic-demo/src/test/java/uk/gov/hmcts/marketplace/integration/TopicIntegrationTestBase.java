@@ -3,9 +3,6 @@ package uk.gov.hmcts.marketplace.integration;
 import com.azure.messaging.servicebus.ServiceBusClientBuilder;
 import com.azure.messaging.servicebus.ServiceBusProcessorClient;
 import com.azure.messaging.servicebus.ServiceBusReceivedMessageContext;
-import com.azure.messaging.servicebus.ServiceBusReceiverAsyncClient;
-import com.azure.messaging.servicebus.models.ServiceBusReceiveMode;
-import com.azure.messaging.servicebus.models.SubQueue;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -64,78 +61,6 @@ public class TopicIntegrationTestBase {
         processorDlq.start();
         TimeUnit.MILLISECONDS.sleep(100);
         processorDlq.stop();
-    }
-
-    // TEST ONLY - Not thread safe
-    @SneakyThrows
-    public int countMessages(String topicName, String subscriptionName) {
-        messageCount = 0;
-        ServiceBusReceiverAsyncClient receiver = new ServiceBusClientBuilder()
-                .connectionString(configService.getConnectionString())
-                .receiver()
-                .topicName(topicName)
-                .subscriptionName(subscriptionName)
-                .buildAsyncClient();
-
-        receiver.peekMessage().subscribe(
-                message -> {
-                    System.out.println("Count Message Id: " + message.getMessageId());
-                    messageCount++;
-                },
-                error -> System.err.println("Error occurred while Counting message: " + error),
-                () -> {
-                    System.out.println("Count complete.");
-                });
-        TimeUnit.MILLISECONDS.sleep(100);
-
-        receiver.close();
-        return messageCount;
-    }
-
-    // TEST ONLY - Not thread safe
-    @SneakyThrows
-    public int countDeadLetterMessages(String topicName, String subscriptionName) {
-        messageCount = 0;
-        ServiceBusReceiverAsyncClient receiver = new ServiceBusClientBuilder()
-                .connectionString(configService.getConnectionString())
-                .receiver()
-                .topicName(topicName)
-                .subscriptionName(subscriptionName)
-                .subQueue(SubQueue.DEAD_LETTER_QUEUE)
-                .buildAsyncClient();
-
-        receiver.peekMessage().subscribe(
-                message -> {
-                    System.out.println("Count Message Id: " + message.getMessageId());
-                    messageCount++;
-                },
-                error -> System.err.println("Error occurred while Counting message: " + error),
-                () -> {
-                    System.out.println("Count complete.");
-                });
-        TimeUnit.MILLISECONDS.sleep(100);
-        receiver.close();
-        return messageCount;
-    }
-
-    @SneakyThrows
-    // TEST ONLY - Not thread safe
-    // Actually does not work cos of peek abanadon not moving into the next message
-    private int countMessages(String topicName, String subscriptionName, boolean dlq) {
-        messageCount = 0;
-        log.info("countMessages {}/{}", topicName, subscriptionName);
-        ServiceBusClientBuilder.ServiceBusProcessorClientBuilder processorBuilder = topicService.processorClientBuilder(topicName, subscriptionName, false, 100);
-        processorBuilder.receiveMode(ServiceBusReceiveMode.PEEK_LOCK);
-        processorBuilder.processMessage(context -> countMessage(topicName, subscriptionName, context));
-        if (dlq) {
-            processorBuilder.subQueue(SubQueue.DEAD_LETTER_QUEUE);
-        }
-        ServiceBusProcessorClient processor = processorBuilder.buildProcessorClient();
-        processor.start();
-        TimeUnit.MILLISECONDS.sleep(1000);
-        processor.stop();
-        System.out.println("returning messageCount:" + messageCount);
-        return messageCount;
     }
 
     private void purgeMessage(String topicName, String subscriptionName, ServiceBusReceivedMessageContext context) {
