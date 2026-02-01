@@ -1,0 +1,153 @@
+#%RAML 0.8
+title: People Query
+version: v0.1
+protocols: [ HTTP, HTTPS ]
+
+baseUri: http://localhost:8080/material-query-api/query/api/rest/material
+
+/material/{materialId}:
+  description: return a material for the given materialId
+  uriParameters:
+     materialId:
+       description: Material ID
+       type: string
+       required: true
+  get:
+    description: |
+      ...
+      (mapping):
+        responseType: application/vnd.material.query.material+json
+        name: material.query.material
+      ...
+    queryParameters:
+         stream:
+           displayName: stream
+           type: string
+           description: Flag to indicate if the file should be streamed back or returned as an attachment
+           example: true
+           required: false
+         requestPdf:
+           displayName: requestPdf
+           type: string
+           description: Flag to indicate in order to request the file as a pdf
+           example: true
+           required: false
+    responses:
+      200:
+        body:
+          application/vnd.material.query.material+json:
+
+/material/{materialId}/metadata:
+  description: return a material metadata for the given materialId
+  uriParameters:
+     materialId:
+       description: Material ID
+       type: string
+       required: true
+  get:
+    description: |
+      ...
+      (mapping):
+        responseType: application/vnd.material.query.material-metadata+json
+        name: material.query.material-metadata
+      (mapping):
+        responseType: application/vnd.material.query.material-metadata-details+json
+        name: material.query.material-metadata-details
+      ...
+    responses:
+      200:
+        body:
+          application/vnd.material.query.material-metadata+json:
+            schema: !include json/schema/material.query.material-metadata.json
+            example: !include json/material.query.material-metadata.json
+          application/vnd.material.query.material-metadata-details+json:
+            schema: !include json/schema/material.query.material-metadata-details.json
+            example: !include json/material.query.material-metadata-details.json
+
+/materials:
+  description: return a map of material ids with isDownloadable attribute
+  get:
+    queryParameters:
+      materialIds:
+        description: comma separated list of material IDs
+        type: string
+        required: true
+        example: b44fa9bb-dc36-4375-83a9-ff1bc4cd4374,1f1fba3c-34ee-454e-b3be-5fb845b2de4a
+    description: |
+      ...
+      (mapping):
+        responseType: application/vnd.material.query.is-downloadable-materials+json
+        name: material.query.is-downloadable-materials
+      ...
+    responses:
+      200:
+        body:
+          application/vnd.material.query.is-downloadable-materials+json:
+            schema: !include json/schema/material.query.is-downloadable-materials.json
+            example: !include json/material.query.is-downloadable-materials.json
+
+/structured-form/{structuredFormId}:
+  uriParameters:
+        structuredFormId:
+          description: ID of structured form to get
+          type: string
+  get:
+    description: |
+      Gets the structured form by urn
+      ...
+      (mapping):
+        responseType: application/vnd.material.query.structured-form+json
+        name: material.query.structured-form
+      ...
+    responses:
+        200:
+          description: OK
+          body:
+            application/vnd.material.query.structured-form+json:
+              example:  !include json/material.query.structured-form.json
+              schema:  !include json/schema/material.query.structured-form.json
+
+/structured-form/{structuredFormId}/history:
+  uriParameters:
+        structuredFormId:
+          description: ID of structured form to get history
+          type: string
+  get:
+    description: |
+      Gets the structured form update history by urn
+      ...
+      (mapping):
+        responseType: application/vnd.material.query.structured-form-change-history+json
+        name: material.query.structured-form-change-history
+      ...
+    responses:
+        200:
+          description: OK
+          body:
+            application/vnd.material.query.structured-form-change-history+json:
+              example:  !include json/material.query.structured-form-change-history.json
+              schema:  !include json/schema/material.query.structured-form-change-history.json
+
+/structured-form/{structuredFormId}/defendant/{defendantId}:
+  uriParameters:
+        structuredFormId:
+          description: ID of structured form to get history
+          type: string
+        defendantId:
+          description: ID of defendant to get perticular defandant
+          type: string
+  get:
+    description: |
+      Gets the structured form update history by urn
+      ...
+      (mapping):
+        responseType: application/vnd.material.query.structured-form-defendant-user+json
+        name: material.query.structured-form-defendant-user
+      ...
+    responses:
+        200:
+          description: OK
+          body:
+            application/vnd.material.query.structured-form-defendant-user+json:
+              example:  !include json/material.query.structured-form-defendant-user.json
+              schema:  !include json/schema/material.query.structured-form-defendant-user.json
