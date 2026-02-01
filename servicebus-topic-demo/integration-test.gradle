@@ -1,5 +1,5 @@
 tasks.register('integrationTest', Test) {
-  description = "Runs integration / service bus tests without docker-compose stack"
+  description = "Runs integration tests without docker-compose up"
   group = "Verification"
 
   testClassesDirs = sourceSets.test.output.classesDirs
@@ -9,13 +9,6 @@ tasks.register('integrationTest', Test) {
     includeTestsMatching '*Integration*'
   }
 }
-
-// We do not run this as part of build or test
-// But we may need to select this when running tests in intellij when we already have
-// docker-compose running
-//tasks.named('test') {
-//  dependsOn tasks.named('integrationTest')
-//}
 
 sourceSets {
   integrationTest {

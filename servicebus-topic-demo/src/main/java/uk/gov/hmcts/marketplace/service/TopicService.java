@@ -1,12 +1,12 @@
 package uk.gov.hmcts.marketplace.service;
 
+import com.azure.messaging.servicebus.ServiceBusClientBuilder;
 import com.azure.messaging.servicebus.ServiceBusErrorContext;
 import com.azure.messaging.servicebus.ServiceBusMessage;
 import com.azure.messaging.servicebus.ServiceBusProcessorClient;
 import com.azure.messaging.servicebus.ServiceBusReceivedMessage;
 import com.azure.messaging.servicebus.ServiceBusReceivedMessageContext;
 import com.azure.messaging.servicebus.ServiceBusSenderClient;
-import com.azure.messaging.servicebus.models.ServiceBusReceiveMode;
 import com.azure.messaging.servicebus.models.SubQueue;
 import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
@@ -24,92 +24,81 @@ public class TopicService {
     private ServiceBusConfigService configService;
     private ClientService clientService;
 
+    /**
+     * Processing messages we can either
+     * a) Receive with PEEK_LOCK which means we lock the message till we either abandom or complete the message
+     * b) Receive with RECEIVE_AND_DELETE which means the message is locked and removed. Unless we throw exception in which
+     * case the failureCount is incremented and sent to DLQ after 3 tries
+     */
     public void sendMessage(String topicName, String message) {
-        ServiceBusSenderClient senderClient = configService
+        ServiceBusSenderClient serviceBusSenderClient = configService
                 .clientBuilder()
                 .sender()
                 .topicName(topicName)
                 .buildClient();
-        senderClient.sendMessage(new ServiceBusMessage(message));
+        serviceBusSenderClient.sendMessage(new ServiceBusMessage(message));
+    }
+
+    public ServiceBusClientBuilder.ServiceBusProcessorClientBuilder processorClientBuilder(String topicName, String subscriptionName, boolean dlq, int processingMilliSecs) {
+        ServiceBusClientBuilder.ServiceBusProcessorClientBuilder builder = configService
+                .clientBuilder()
+                .processor()
+                .topicName(topicName)
+                .subscriptionName(subscriptionName)
+                .processMessage(context -> handleMessage(topicName, subscriptionName, context))
+                .processError(context -> handleError(topicName, subscriptionName, context));
+        if (dlq) {
+            builder.subQueue(SubQueue.DEAD_LETTER_QUEUE);
+        }
+        return builder;
     }
 
     @SneakyThrows
-    public void processMessages(String topicName, String subscriptionName, int processingSecs) {
+    public void processMessages(String topicName, String subscriptionName, int processingMilliSecs) {
         ServiceBusProcessorClient processorClient = configService
                 .clientBuilder()
                 .processor()
                 .topicName(topicName)
                 .subscriptionName(subscriptionName)
-                .processMessage(context -> processMessage(topicName, subscriptionName, context))
-                .processError(context -> processError(topicName, subscriptionName, context))
+                .processMessage(context -> handleMessage(topicName, subscriptionName, context))
+                .processError(context -> handleError(topicName, subscriptionName, context))
                 .buildProcessorClient();
 
-        log.info("Starting the processor for {}", subscriptionName);
-        processorClient.start();
-
-        TimeUnit.SECONDS.sleep(processingSecs);
-        log.info("Stopping and closing the processor for {}", subscriptionName);
-        processorClient.close();
+        processFor(processorClient, processingMilliSecs);
     }
 
     @SneakyThrows
-    public int countDeadLetterQueue(String topicName, String subscriptionName, int processingSecs) {
-        int count = 0;
-        ServiceBusProcessorClient processorClient = configService
-                .clientBuilder()
-                .processor()
-                .topicName(topicName)
-                .subscriptionName(subscriptionName)
-                .subQueue(SubQueue.DEAD_LETTER_QUEUE)
-                .receiveMode(ServiceBusReceiveMode.PEEK_LOCK)
-                .processMessage(context -> peekMessage(topicName, subscriptionName, context, count))
-                .processError(context -> processError(topicName, subscriptionName, context))
-                .buildProcessorClient();
-
-        log.info("Starting the processor for {}", subscriptionName);
-        processorClient.start();
-
-        TimeUnit.SECONDS.sleep(processingSecs);
-        log.info("Stopping and closing the processor for {} with {} processed", subscriptionName, count);
-        processorClient.close();
-        return count;
-    }
-
-    @SneakyThrows
-    public void processDeadLetterQueue(String topicName, String subscriptionName, int processingSecs) {
+    public void processDeadLetterMessages(String topicName, String subscriptionName, int processingMilliSecs) {
         ServiceBusProcessorClient processorClient = configService
                 .clientBuilder()
                 .processor()
                 .topicName(topicName)
                 .subscriptionName(subscriptionName)
                 .subQueue(SubQueue.DEAD_LETTER_QUEUE)
-                .receiveMode(ServiceBusReceiveMode.PEEK_LOCK)
-                .processMessage(context -> processMessage(topicName, subscriptionName, context))
-                .processError(context -> processError(topicName, subscriptionName, context))
+                .processMessage(context -> handleMessage(topicName, subscriptionName + "-DLQ", context))
+                .processError(context -> handleError(topicName, subscriptionName + "-DLQ", context))
                 .buildProcessorClient();
 
-        log.info("Starting the processor for {}", subscriptionName);
-        processorClient.start();
-
-        TimeUnit.SECONDS.sleep(processingSecs);
-        log.info("Stopping and closing the processor for {}", subscriptionName);
-        processorClient.close();
+        processFor(processorClient, processingMilliSecs);
     }
 
-    private void peekMessage(String topicName, String subscriptionName, ServiceBusReceivedMessageContext context, int count) {
+    public void handleMessage(String topicName, String subscriptionName, ServiceBusReceivedMessageContext context) {
         ServiceBusReceivedMessage message = context.getMessage();
-        log.info("Peeking {}/{} messageId:{} {}", topicName, subscriptionName, message.getMessageId(), message.getBody());
-        count++;
-    }
-
-    private void processMessage(String topicName, String subscriptionName, ServiceBusReceivedMessageContext context) {
-        ServiceBusReceivedMessage message = context.getMessage();
-        log.info("Processing {}/{} messageId:{} {}", topicName, subscriptionName, message.getMessageId(), message.getBody());
+        log.info("Processing {}/{} messageId:{} deliveryCount:{}", topicName, subscriptionName, message.getMessageId(), message.getDeliveryCount());
         clientService.receiveMessage(topicName, subscriptionName, String.valueOf(message.getBody()));
     }
 
-    private static void processError(String topicName, String subscriptionName, ServiceBusErrorContext context) {
+    public void handleError(String topicName, String subscriptionName, ServiceBusErrorContext context) {
         // We need to properly handle the error ... leave it on the queue / send to DLQ
-        log.error("error processing subscription message.", context.getException());
+        log.error("error processing subscription message - {}", context.getException().getMessage());
+    }
+
+    @SneakyThrows
+    private void processFor(ServiceBusProcessorClient processorClient, int processingMilliSecs) {
+        log.info("starting processor");
+        processorClient.start();
+        TimeUnit.MILLISECONDS.sleep(processingMilliSecs);
+        log.info("stopping processor");
+        processorClient.close();
     }
 }

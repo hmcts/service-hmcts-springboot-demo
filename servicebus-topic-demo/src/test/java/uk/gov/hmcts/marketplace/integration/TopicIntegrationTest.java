@@ -21,12 +21,13 @@ import java.util.Random;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 @Slf4j
 @SpringBootTest
-public class TopicIntegrationTest {
+public class TopicIntegrationTest extends TopicIntegrationTestBase {
 
     @Autowired
     TopicService topicService;
@@ -36,16 +37,24 @@ public class TopicIntegrationTest {
 
     @BeforeEach
     void setUp() {
+        log.info("START BEFORE");
         await()
                 .atMost(Duration.ofSeconds(60))
                 .pollInterval(Duration.ofSeconds(1))
                 .until(this::isServiceBusReady);
-    }
+//        System.out.println("COUNTING messages");
+//        log.info("Sub1 Count:{}", countMessages(topicName, subscription1));
+//        log.info("Sub1 DLQ Count:{}", countDeadLetterMessages(topicName, subscription1));
+        System.out.println("PURGING messages");
+        purgeMessages(topicName, subscription1);
+        purgeMessages(topicName, subscription2);
 
-    String topicName = "topic.1";
-    String subscription1 = "subscription.1";
-    String subscription2 = "subscription.2";
-    int maxDeliveryCount = 3;
+//        assertThat(countMessages(topicName, subscription1)).isZero();
+//        assertThat(countDeadLetterMessages(topicName, subscription1)).isZero();
+//        assertThat(countMessages(topicName, subscription2)).isZero();
+//        assertThat(countDeadLetterMessages(topicName, subscription2)).isZero();
+        log.info("Done BEFORE");
+    }
 
     @Test
     void service_bus_config_should_match_expected() {
@@ -62,29 +71,51 @@ public class TopicIntegrationTest {
 
     @Test
     void sent_messages_should_process_and_send_to_client() {
-        String message1 = String.format("My message %04d", new Random().nextInt(100));
+        String message1 = randomMessage();
         topicService.sendMessage(topicName, message1);
-        String message2 = String.format("My message %04d", new Random().nextInt(100));
+        String message2 = randomMessage();
         topicService.sendMessage(topicName, message2);
 
-        topicService.processMessages(topicName, subscription1, 2);
+        topicService.processMessages(topicName, subscription1, 100);
+
         verify(clientService).receiveMessage(topicName, subscription1, message1);
         verify(clientService).receiveMessage(topicName, subscription1, message2);
     }
 
     @Test
-    void process_message_should_retry_n_times_with_x_secs_delay() {
-        String message = String.format("My message %04d", new Random().nextInt(100));
+    void process_message_should_retry_n_times_then_send_to_DLQ() {
+        System.out.println("SENDING message");
         topicService.sendMessage(topicName, message);
+        System.out.println("COUNTING message");
+//        assertThat(countMessages(topicName, subscription1)).isEqualTo(1L);
+//        assertThat(countMessages(topicName, subscription1)).isEqualTo(1L);
+
+        log.info("getting messages ... {} sends and then should fail to DLQ", maxDeliveryCount);
+        doThrow(HttpClientErrorException.class).when(clientService).receiveMessage(topicName, subscription1, message);
+        topicService.processMessages(topicName, subscription1, 500);
+        verify(clientService, times(maxDeliveryCount)).receiveMessage(topicName, subscription1, message);
+//        assertThat(countMessages(topicName, subscription1)).isEqualTo(0L);
+//        assertThat(countDeadLetterMessages(topicName, subscription1)).isEqualTo(1L);
+//        assertThat(countDeadLetterMessages(topicName, subscription1)).isEqualTo(1L);
+
+        log.info("reprocessing messages from DLQ just once");
+        reset(clientService);
+        topicService.processDeadLetterMessages(topicName, subscription1, 500);
+        verify(clientService).receiveMessage(topicName, subscription1 + "-DLQ", message);
+    }
+
+    @Test
+    void dlq_count_should_be_accurate() {
+//        assertThat(countDeadLetterMessages(topicName, subscription1)).isZero();
 
         doThrow(HttpClientErrorException.class).when(clientService).receiveMessage(topicName, subscription1, message);
-        topicService.processMessages(topicName, subscription1, 2);
-
+        topicService.sendMessage(topicName, message);
+        topicService.processMessages(topicName, subscription1, 500);
         verify(clientService, times(maxDeliveryCount)).receiveMessage(topicName, subscription1, message);
 
-//        assertThat(topicService.countDeadLetterQueue(topicName, subscription1, 2)).isEqualTo(1);
-//        assertThat(topicService.countDeadLetterQueue(topicName, subscription1, 2)).isEqualTo(1);
+//        assertThat(countDeadLetterMessages(topicName, subscription1)).isEqualTo(1);
     }
+
 
     private void assertServiceBusConfigFile() {
         String topicPath = "UserConfig.Namespaces[0].Topics[0]";
@@ -104,20 +135,14 @@ public class TopicIntegrationTest {
         log.info("Topic {} Subscription {} has maxDeliveryCount:{}", topicName, subscriptionName, maxDeliveryCount);
     }
 
+    private String randomMessage() {
+        return String.format("My message %04d", new Random().nextInt(1000));
+    }
+
     @SneakyThrows
     private Object getValueFromServiceBusConfig(String jsonPath) {
         String configFileJson = Files.readString(Path.of("docker/service-bus-config.json"));
         DocumentContext jsonContext = JsonPath.parse(configFileJson);
         return jsonContext.read(jsonPath);
-    }
-
-    private boolean isServiceBusReady() {
-        try {
-            topicService.processMessages(topicName, subscription1, 1);
-            return true;
-        } catch (Exception e) {
-            log.info("waiting for servicebus to start");
-            return false;
-        }
     }
 }
