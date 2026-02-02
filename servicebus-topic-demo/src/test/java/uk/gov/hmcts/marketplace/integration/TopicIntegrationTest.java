@@ -1,7 +1,7 @@
 package uk.gov.hmcts.marketplace.integration;
 
-import com.jayway.jsonpath.DocumentContext;
-import com.jayway.jsonpath.JsonPath;
+import com.azure.messaging.servicebus.administration.models.CreateSubscriptionOptions;
+import com.azure.messaging.servicebus.administration.models.CreateTopicOptions;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
@@ -10,19 +10,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.web.client.HttpClientErrorException;
-import uk.gov.hmcts.marketplace.service.ClientService;
+import uk.gov.hmcts.marketplace.service.AmpClientService;
 import uk.gov.hmcts.marketplace.service.TopicService;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Random;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -39,7 +35,7 @@ public class TopicIntegrationTest extends TopicIntegrationTestBase {
     TopicService topicService;
 
     @MockitoBean
-    ClientService clientService;
+    AmpClientService ampClientService;
 
     @BeforeEach
     void setUp() {
@@ -47,21 +43,10 @@ public class TopicIntegrationTest extends TopicIntegrationTestBase {
                 .atMost(Duration.ofSeconds(60))
                 .pollInterval(Duration.ofSeconds(1))
                 .until(this::isServiceBusReady);
+        createTopicAndSubscription(topicName, subscription1);
+        createTopicAndSubscription(topicName, subscription2);
         purgeMessages(topicName, subscription1);
         purgeMessages(topicName, subscription2);
-    }
-
-    @Test
-    void service_bus_config_should_match_expected() {
-        log.info(
-                """
-                           Service Bus Emulator limitations ...
-                           Sadly, we cannot control the service bus config programmatically with the azure sb emulator
-                            We can only go with the config file loaded in by docker-compose
-                            So we need to make sure the config matches what we expect in our tests
-                            ( Of course changing the config requires docker-compose restart to reload the config
-                        """);
-        assertServiceBusConfigFile();
     }
 
     @Test
@@ -73,8 +58,8 @@ public class TopicIntegrationTest extends TopicIntegrationTestBase {
 
         topicService.processMessages(topicName, subscription1, 500);
 
-        verify(clientService).receiveMessage(topicName, subscription1, message1);
-        verify(clientService).receiveMessage(topicName, subscription1, message2);
+        verify(ampClientService).receiveMessage(topicName, subscription1, message1);
+        verify(ampClientService).receiveMessage(topicName, subscription1, message2);
     }
 
     @Test
@@ -82,74 +67,63 @@ public class TopicIntegrationTest extends TopicIntegrationTestBase {
         topicService.sendMessage(topicName, message);
 
         log.info("getting messages ... {} sends and then should fail to DLQ", maxDeliveryCount);
-        doThrow(HttpClientErrorException.class).when(clientService).receiveMessage(topicName, subscription1, message);
+        doThrow(HttpClientErrorException.class).when(ampClientService).receiveMessage(topicName, subscription1, message);
         topicService.processMessages(topicName, subscription1, 500);
-        verify(clientService, times(maxDeliveryCount)).receiveMessage(topicName, subscription1, message);
+        verify(ampClientService, times(maxDeliveryCount)).receiveMessage(topicName, subscription1, message);
 
         log.info("reprocessing messages from DLQ just once");
-        reset(clientService);
+        reset(ampClientService);
         topicService.processDeadLetterMessages(topicName, subscription1, 500);
-        verify(clientService).receiveMessage(topicName, subscription1 + "-DLQ", message);
+        verify(ampClientService).receiveMessage(topicName, subscription1 + "-DLQ", message);
     }
 
+    @SneakyThrows
     @Test
-    void many_threads_reading_should_be_ok() {
-        log.info("START");
-        ExecutorService executor = Executors.newFixedThreadPool(10);
-        Future<Boolean> future1 = executor.submit(() -> {
-            topicService.processMessages(topicName, subscription1, 5000);
-            return true;
-        });
-        Future<Boolean> future2 = executor.submit(() -> {
-            topicService.processMessages(topicName, subscription1, 5000);
-            return true;
-        });
-
-        // Of course we would like to send many messages but it currently hangs after 8 messages. Odd.
-        for (int n = 100; n <= 106; n++) {
-            log.info("Sending {}", n);
+    void many_threads_reading_many_messages_should_be_ok() {
+        int numberOfMessages = 100;
+        int numberOfProcessors = 7;
+        int processingMilliSecs = 10000;
+        ExecutorService executor = Executors.newFixedThreadPool(numberOfProcessors);
+        createProcessorThreads(executor, numberOfProcessors, processingMilliSecs);
+        for (int n = 0; n < numberOfMessages; n++) {
+            log.info("Sending message {}", n);
             topicService.sendMessage(topicName, "My message" + n);
         }
-        log.info("DONE SENDS");
-
-        try {
-            future1.get();
-            future2.get();
-        } catch (InterruptedException | ExecutionException e) {
-            e.printStackTrace();
-        }
+        log.info("Sent {} messages", numberOfMessages);
+        TimeUnit.MILLISECONDS.sleep(processingMilliSecs);
         executor.shutdown();
 
-        verify(clientService, times(5)).receiveMessage(eq(topicName), eq(subscription1), anyString());
+        verify(ampClientService, times(numberOfMessages)).receiveMessage(eq(topicName), eq(subscription1), anyString());
     }
 
 
-    private void assertServiceBusConfigFile() {
-        String topicPath = "UserConfig.Namespaces[0].Topics[0]";
-
-        String topicName = (String) getValueFromServiceBusConfig(topicPath + ".Name");
-        assertThat(topicName).isEqualTo("topic.1");
-
-        String subscriptionName = (String) getValueFromServiceBusConfig(topicPath + ".Subscriptions[0].Name");
-        assertThat(subscriptionName).isEqualTo("subscription.1");
-
-        int maxDeliveryCount = (int) getValueFromServiceBusConfig(topicPath + ".Subscriptions[0].Properties.MaxDeliveryCount");
-        assertThat(maxDeliveryCount).isEqualTo(3);
-
-        boolean deadLetterEnabled = (boolean) getValueFromServiceBusConfig(topicPath + ".Subscriptions[0].Properties.DeadLetteringOnMessageExpiration");
-        assertThat(deadLetterEnabled).isTrue();
-
-        log.info("Topic {} Subscription {} has maxDeliveryCount:{}", topicName, subscriptionName, maxDeliveryCount);
+    private void createProcessorThreads(ExecutorService executorService, int numberOfProcessors, int processingMilliSecs) {
+        for (int n = 0; n < numberOfProcessors; n++) {
+            executorService.submit(() -> {
+                topicService.processMessages(topicName, subscription1, processingMilliSecs);
+                return true;
+            });
+        }
     }
 
     private String randomMessage() {
         return String.format("My message %04d", new Random().nextInt(1000));
     }
 
-    @SneakyThrows
-    private Object getValueFromServiceBusConfig(String jsonPath) {
-        String configFileJson = Files.readString(Path.of("docker/service-bus-config.json"));
-        DocumentContext jsonContext = JsonPath.parse(configFileJson);
-        return jsonContext.read(jsonPath);
+    private void createTopicAndSubscription(String topicName, String subscriptionName) {
+        if (!adminClient.getTopicExists(topicName)) {
+            CreateTopicOptions createTopicOptions = new CreateTopicOptions();
+            createTopicOptions.setDefaultMessageTimeToLive(Duration.ofHours(1));
+            createTopicOptions.setDuplicateDetectionRequired(false);
+            adminClient.createTopic(topicName, createTopicOptions);
+        }
+        if (!adminClient.getSubscriptionExists(topicName, subscriptionName)) {
+            CreateSubscriptionOptions options = new CreateSubscriptionOptions();
+            options.setDeadLetteringOnMessageExpiration(true);
+            options.setDefaultMessageTimeToLive(Duration.ofHours(1));
+            options.setLockDuration(Duration.ofMinutes(1));
+            options.setMaxDeliveryCount(3);
+            adminClient.createSubscription(topicName, subscriptionName, options);
+        }
     }
 }

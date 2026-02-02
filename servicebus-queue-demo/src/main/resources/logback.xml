@@ -1,7 +1,7 @@
 <configuration>
     <appender name="SIMPLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>%d{HH:mm:ss.SSS} %-5level %logger{36} - %msg%n</pattern>
+            <pattern>%d{HH:mm:ss.SSS} %-5level %thread %logger{36} - %msg%n</pattern>
         </encoder>
     </appender>
     <!-- Primary goal of this logback config is to reduce the huge noise coming from Azure SDK -->

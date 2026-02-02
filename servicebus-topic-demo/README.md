@@ -7,13 +7,13 @@ We demo the following capabilities
 * Single send to topic and multiple subscriptions notified
 * Subscription send failure increase failure count and move to DLQ
 * Reprocess from DLQ
-* Purge subscription queue and DLQ queue ( especially for test )
-* Send many messages and multi thread processing
+* Purge subscription queue and DLQ queue ( especially needed for test )
+* Send many messages with multi thread processing
+* Admin such as query / add / delete queue or topic+subscriptions
+
 
 We currently have the following niggles in our demo
-* Cannot do topic admin such as add subscriptions or get-count
-* When sending more than 9 messages it just hangs. Odd.
-
+* Unable to get a queue count or subscription count
 
 # Todo
 Multiple threads processing

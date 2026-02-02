@@ -16,38 +16,31 @@ import uk.gov.hmcts.marketplace.config.ServiceBusConfigService;
 
 import java.util.concurrent.TimeUnit;
 
-@Service
-@AllArgsConstructor
 @Slf4j
-public class TopicService {
-
-    private ServiceBusConfigService configService;
+@AllArgsConstructor
+@Service
+public class QueueService {
+    private final ServiceBusConfigService configService;
     private AmpClientService ampClientService;
 
-    /**
-     * Processing messages from queue or topic-subscriber we can either
-     * a) Receive with PEEK_LOCK which means we lock the message till we either abandon or complete the message
-     * b) Receive with RECEIVE_AND_DELETE which means the message is locked and removed. Unless we throw exception in which
-     * case the failureCount is incremented and sent to DLQ after 3 tries
-     */
-    public void sendMessage(String topicName, String message) {
+    public void sendMessage(String queueName, String message) {
         ServiceBusSenderClient serviceBusSenderClient = configService
                 .clientBuilder()
                 .sender()
-                .topicName(topicName)
+                .queueName(queueName)
                 .buildClient();
         serviceBusSenderClient.sendMessage(new ServiceBusMessage(message));
         serviceBusSenderClient.close();
+        log.info("Sent message to queue {}", queueName);
     }
 
-    public ServiceBusClientBuilder.ServiceBusProcessorClientBuilder processorClientBuilder(String topicName, String subscriptionName, boolean dlq, int processingMilliSecs) {
+    public ServiceBusClientBuilder.ServiceBusProcessorClientBuilder processorClientBuilder(String queueName, boolean dlq) {
         ServiceBusClientBuilder.ServiceBusProcessorClientBuilder builder = configService
                 .clientBuilder()
                 .processor()
-                .topicName(topicName)
-                .subscriptionName(subscriptionName)
-                .processMessage(context -> handleMessage(topicName, subscriptionName, context))
-                .processError(context -> handleError(topicName, subscriptionName, context));
+                .queueName(queueName)
+                .processMessage(context -> handleMessage(queueName, context))
+                .processError(context -> handleError(queueName, context));
         if (dlq) {
             builder.subQueue(SubQueue.DEAD_LETTER_QUEUE);
         }
@@ -55,41 +48,39 @@ public class TopicService {
     }
 
     @SneakyThrows
-    public void processMessages(String topicName, String subscriptionName, int processingMilliSecs) {
+    public void processMessages(String queueName, int processingMilliSecs) {
         ServiceBusProcessorClient processorClient = configService
                 .clientBuilder()
                 .processor()
-                .topicName(topicName)
-                .subscriptionName(subscriptionName)
-                .processMessage(context -> handleMessage(topicName, subscriptionName, context))
-                .processError(context -> handleError(topicName, subscriptionName, context))
+                .queueName(queueName)
+                .processMessage(context -> handleMessage(queueName, context))
+                .processError(context -> handleError(queueName, context))
                 .buildProcessorClient();
 
         processFor(processorClient, processingMilliSecs);
     }
 
     @SneakyThrows
-    public void processDeadLetterMessages(String topicName, String subscriptionName, int processingMilliSecs) {
+    public void processDeadLetterMessages(String queueName, int processingMilliSecs) {
         ServiceBusProcessorClient processorClient = configService
                 .clientBuilder()
                 .processor()
-                .topicName(topicName)
-                .subscriptionName(subscriptionName)
+                .queueName(queueName)
                 .subQueue(SubQueue.DEAD_LETTER_QUEUE)
-                .processMessage(context -> handleMessage(topicName, subscriptionName + "-DLQ", context))
-                .processError(context -> handleError(topicName, subscriptionName + "-DLQ", context))
+                .processMessage(context -> handleMessage(queueName + "-DLQ", context))
+                .processError(context -> handleError(queueName + "-DLQ", context))
                 .buildProcessorClient();
 
         processFor(processorClient, processingMilliSecs);
     }
 
-    public void handleMessage(String topicName, String subscriptionName, ServiceBusReceivedMessageContext context) {
+    public void handleMessage(String queueName, ServiceBusReceivedMessageContext context) {
         ServiceBusReceivedMessage message = context.getMessage();
-        log.info("Processing {}/{} messageId:{} deliveryCount:{}", topicName, subscriptionName, message.getMessageId(), message.getDeliveryCount());
-        ampClientService.receiveMessage(topicName, subscriptionName, String.valueOf(message.getBody()));
+        log.info("Processing {} messageId:{} deliveryCount:{}", queueName, message.getMessageId(), message.getDeliveryCount());
+        ampClientService.receiveMessage(queueName, String.valueOf(message.getBody()));
     }
 
-    public void handleError(String topicName, String subscriptionName, ServiceBusErrorContext context) {
+    public void handleError(String queueName, ServiceBusErrorContext context) {
         // We need to properly handle the error ... leave it on the queue / send to DLQ
         log.error("error processing subscription message - {}", context.getException().getMessage());
     }
