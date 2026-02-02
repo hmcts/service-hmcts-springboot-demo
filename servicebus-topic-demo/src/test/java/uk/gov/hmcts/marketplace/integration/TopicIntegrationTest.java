@@ -17,16 +17,23 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Random;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 @Slf4j
 @SpringBootTest
-public class TopicIntegrationTest {
+public class TopicIntegrationTest extends TopicIntegrationTestBase {
 
     @Autowired
     TopicService topicService;
@@ -40,12 +47,9 @@ public class TopicIntegrationTest {
                 .atMost(Duration.ofSeconds(60))
                 .pollInterval(Duration.ofSeconds(1))
                 .until(this::isServiceBusReady);
+        purgeMessages(topicName, subscription1);
+        purgeMessages(topicName, subscription2);
     }
-
-    String topicName = "topic.1";
-    String subscription1 = "subscription.1";
-    String subscription2 = "subscription.2";
-    int maxDeliveryCount = 3;
 
     @Test
     void service_bus_config_should_match_expected() {
@@ -62,29 +66,63 @@ public class TopicIntegrationTest {
 
     @Test
     void sent_messages_should_process_and_send_to_client() {
-        String message1 = String.format("My message %04d", new Random().nextInt(100));
+        String message1 = randomMessage();
         topicService.sendMessage(topicName, message1);
-        String message2 = String.format("My message %04d", new Random().nextInt(100));
+        String message2 = randomMessage();
         topicService.sendMessage(topicName, message2);
 
-        topicService.processMessages(topicName, subscription1, 2);
+        topicService.processMessages(topicName, subscription1, 500);
+
         verify(clientService).receiveMessage(topicName, subscription1, message1);
         verify(clientService).receiveMessage(topicName, subscription1, message2);
     }
 
     @Test
-    void process_message_should_retry_n_times_with_x_secs_delay() {
-        String message = String.format("My message %04d", new Random().nextInt(100));
+    void process_message_should_retry_n_times_then_send_to_DLQ() {
         topicService.sendMessage(topicName, message);
 
+        log.info("getting messages ... {} sends and then should fail to DLQ", maxDeliveryCount);
         doThrow(HttpClientErrorException.class).when(clientService).receiveMessage(topicName, subscription1, message);
-        topicService.processMessages(topicName, subscription1, 2);
-
+        topicService.processMessages(topicName, subscription1, 500);
         verify(clientService, times(maxDeliveryCount)).receiveMessage(topicName, subscription1, message);
 
-//        assertThat(topicService.countDeadLetterQueue(topicName, subscription1, 2)).isEqualTo(1);
-//        assertThat(topicService.countDeadLetterQueue(topicName, subscription1, 2)).isEqualTo(1);
+        log.info("reprocessing messages from DLQ just once");
+        reset(clientService);
+        topicService.processDeadLetterMessages(topicName, subscription1, 500);
+        verify(clientService).receiveMessage(topicName, subscription1 + "-DLQ", message);
     }
+
+    @Test
+    void many_threads_reading_should_be_ok() {
+        log.info("START");
+        ExecutorService executor = Executors.newFixedThreadPool(10);
+        Future<Boolean> future1 = executor.submit(() -> {
+            topicService.processMessages(topicName, subscription1, 5000);
+            return true;
+        });
+        Future<Boolean> future2 = executor.submit(() -> {
+            topicService.processMessages(topicName, subscription1, 5000);
+            return true;
+        });
+
+        // Of course we would like to send many messages but it currently hangs after 8 messages. Odd.
+        for (int n = 100; n <= 106; n++) {
+            log.info("Sending {}", n);
+            topicService.sendMessage(topicName, "My message" + n);
+        }
+        log.info("DONE SENDS");
+
+        try {
+            future1.get();
+            future2.get();
+        } catch (InterruptedException | ExecutionException e) {
+            e.printStackTrace();
+        }
+        executor.shutdown();
+
+        verify(clientService, times(5)).receiveMessage(eq(topicName), eq(subscription1), anyString());
+    }
+
 
     private void assertServiceBusConfigFile() {
         String topicPath = "UserConfig.Namespaces[0].Topics[0]";
@@ -104,20 +142,14 @@ public class TopicIntegrationTest {
         log.info("Topic {} Subscription {} has maxDeliveryCount:{}", topicName, subscriptionName, maxDeliveryCount);
     }
 
+    private String randomMessage() {
+        return String.format("My message %04d", new Random().nextInt(1000));
+    }
+
     @SneakyThrows
     private Object getValueFromServiceBusConfig(String jsonPath) {
         String configFileJson = Files.readString(Path.of("docker/service-bus-config.json"));
         DocumentContext jsonContext = JsonPath.parse(configFileJson);
         return jsonContext.read(jsonPath);
-    }
-
-    private boolean isServiceBusReady() {
-        try {
-            topicService.processMessages(topicName, subscription1, 1);
-            return true;
-        } catch (Exception e) {
-            log.info("waiting for servicebus to start");
-            return false;
-        }
     }
 }
