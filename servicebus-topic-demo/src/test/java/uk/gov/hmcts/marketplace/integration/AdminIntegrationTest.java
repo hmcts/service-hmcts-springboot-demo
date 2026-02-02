@@ -25,30 +25,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest
 public class AdminIntegrationTest extends TopicIntegrationTestBase {
 
-    private int adminConnectionPort = 5300;
-    private String adminConnectionString = "Endpoint=sb://127.0.0.1:5300;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;";
-
-    HttpClient adminHttpClient = new NettyAsyncHttpClientBuilder()
-            .port(adminConnectionPort)
-            .build();
-
-    HttpPipelinePolicy forceHttpPolicy = (context, next) -> {
-        try {
-            URL current = context.getHttpRequest().getUrl();
-            URL httpUrl = new URL("http", current.getHost(), adminConnectionPort, current.getFile());
-            context.getHttpRequest().setUrl(httpUrl);
-        } catch (MalformedURLException e) {
-            return Mono.error(e);
-        }
-        return next.process();
-    };
-
-    ServiceBusAdministrationClient adminClient = new ServiceBusAdministrationClientBuilder()
-            .connectionString(adminConnectionString)
-            .httpClient(adminHttpClient)
-            .addPolicy(forceHttpPolicy)
-            .buildClient();
-
     @Test
     void admin_console_should_get_topics_andsubscriptions() {
         List<String> topics = adminClient.listTopics().stream().map(TopicProperties::getName).toList();
