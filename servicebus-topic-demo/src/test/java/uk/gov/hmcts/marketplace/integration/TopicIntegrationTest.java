@@ -17,9 +17,15 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Random;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
@@ -87,11 +93,38 @@ public class TopicIntegrationTest extends TopicIntegrationTestBase {
     }
 
     @Test
-    void dlq_count_should_be_accurate() {
-        doThrow(HttpClientErrorException.class).when(clientService).receiveMessage(topicName, subscription1, message);
-        topicService.sendMessage(topicName, message);
-        topicService.processMessages(topicName, subscription1, 500);
-        verify(clientService, times(maxDeliveryCount)).receiveMessage(topicName, subscription1, message);
+    void many_threads_reading_should_be_ok() {
+        log.info("START");
+        ExecutorService executor = Executors.newFixedThreadPool(10);
+        Future<Boolean> future1 = executor.submit(() -> {
+            topicService.processMessages(topicName, subscription1, 5000);
+            return true;
+        });
+        Future<Boolean> future2 = executor.submit(() -> {
+            topicService.processMessages(topicName, subscription1, 5000);
+            return true;
+        });
+//        Future<Boolean> future3 = executor.submit(() -> {
+//            topicService.processMessages(topicName, subscription1, 5000);
+//            return true;
+//        });
+
+        for (int n = 100; n <= 108; n++) {
+            log.info("Sending {}", n);
+            topicService.sendMessage(topicName, "My message" + n);
+        }
+        log.info("DONE SENDS");
+
+        try {
+            future1.get();
+            future2.get();
+            // future3.get();
+        } catch (InterruptedException | ExecutionException e) {
+            e.printStackTrace();
+        }
+        executor.shutdown();
+
+        verify(clientService, times(9)).receiveMessage(eq(topicName), eq(subscription1), anyString());
     }
 
 

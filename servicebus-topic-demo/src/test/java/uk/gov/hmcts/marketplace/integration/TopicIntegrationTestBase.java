@@ -10,7 +10,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import uk.gov.hmcts.marketplace.config.ServiceBusConfigService;
 import uk.gov.hmcts.marketplace.service.TopicService;
 
-import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -28,7 +27,7 @@ public class TopicIntegrationTestBase {
     String subscription1 = "subscription.1";
     String subscription2 = "subscription.2";
     int maxDeliveryCount = 3;
-    String message = String.format("My message %04d", new Random().nextInt(100));
+    String message = "My message";
 
     protected boolean isServiceBusReady() {
         try {
@@ -66,12 +65,5 @@ public class TopicIntegrationTestBase {
     private void purgeMessage(String topicName, String subscriptionName, ServiceBusReceivedMessageContext context) {
         log.info("purgeMessage {}/{} {}", topicName, subscriptionName, context.getMessage().getMessageId());
         // do nothing just let the message complete
-    }
-
-    private void countMessage(String topicName, String subscriptionName, ServiceBusReceivedMessageContext context) {
-        log.info("countMessage {}/{} {}", topicName, subscriptionName, context.getMessage().getMessageId());
-        messageCount++;
-        context.abandon();
-        System.out.println("incrementing messageCount to:" + messageCount);
     }
 }
