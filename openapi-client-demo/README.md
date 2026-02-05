@@ -26,4 +26,6 @@ This allows us to folly test the exact examples that we have provided
 i.e. An endpoint may return non compliant json or json that drifts from the spec.
 
 It would be ideal if we could get java objects returned from the openapi clients
-But we could mock the underlying openapi client with a json string.
+And mock the underlying openapi client with a json string.
+
+We could do this with wiremock as in this example
