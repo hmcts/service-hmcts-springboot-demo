@@ -31,7 +31,7 @@ public class DemoService {
 
     public String callMapperMethod() {
         DemoRequest request = DemoRequest.builder().build();
-        demoMapper.mapToResponse(clockService, request);
+        demoMapper.mapToResponseWithClock(clockService, request);
         return "Something";
     }
 }

@@ -24,8 +24,8 @@ class MapperRealClockIntegrationTest {
     @Test
     void mock_clock_should_return_date_and_time() {
         OffsetDateTime startTime = OffsetDateTime.now();
-        log.info("starteddAt:{}", startTime);
-        DemoResponse response = demoMapper.mapToResponse(clockService, DemoRequest.builder().build());
+        log.info("startedAt:{}", startTime);
+        DemoResponse response = demoMapper.mapToResponseWithClock(clockService, DemoRequest.builder().build());
         log.info("createdAt:{}", response.getCreatedAt());
         assertThat(response.getCreatedAt()).isAfter(startTime);
     }

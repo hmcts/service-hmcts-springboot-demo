@@ -30,7 +30,7 @@ class MapperMockClockIntegrationTest {
     @Test
     void mock_clock_should_return_date_and_time() {
         when(clockService.now()).thenReturn(MOCKNOW);
-        DemoResponse response = demoMapper.mapToResponse(clockService, DemoRequest.builder().build());
+        DemoResponse response = demoMapper.mapToResponseWithClock(clockService, DemoRequest.builder().build());
         assertThat(response.getCreatedAt()).isEqualTo(MOCKNOW);
     }
 }
