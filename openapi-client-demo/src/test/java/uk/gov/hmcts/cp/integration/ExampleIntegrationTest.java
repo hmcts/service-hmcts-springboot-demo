@@ -11,7 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import uk.gov.hmcts.cp.openapi.model.ExampleResponse;
+import uk.gov.hmcts.cp.service.AmpResponse;
 import uk.gov.hmcts.cp.service.OpenApiConsumerService;
 
 import java.nio.file.Files;
@@ -25,7 +25,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
 @Slf4j
-class ExampleControllerIntegrationTest {
+class ExampleIntegrationTest {
 
     private WireMockServer wireMockServer;
 
@@ -37,7 +37,7 @@ class ExampleControllerIntegrationTest {
     void client_should_get_example() {
         stubGetResponse("/example/" + 21, "example-response.json");
 
-        ExampleResponse response = openApiConsumerService.getExample(21L);
+        AmpResponse response = openApiConsumerService.getExample(21L);
         assertThat(response.getExampleId()).isEqualTo(21L);
         assertThat(response.getExampleText()).isEqualTo("Hello");
     }

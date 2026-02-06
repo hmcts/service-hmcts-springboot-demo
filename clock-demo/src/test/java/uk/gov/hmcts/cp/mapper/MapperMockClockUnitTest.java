@@ -25,9 +25,15 @@ class MapperMockClockUnitTest {
     private final static OffsetDateTime MOCKNOW = OffsetDateTime.of(2025, 12, 1, 11, 30, 59, 0, ZoneOffset.UTC);
 
     @Test
-    void mapper_should_use_mock_datetime() {
+    void mapper_should_use_mock_datetime_from_clock() {
         when(clockService.now()).thenReturn(MOCKNOW);
-        DemoResponse demoResponse = demoMapper.mapToResponse(clockService, DemoRequest.builder().build());
+        DemoResponse demoResponse = demoMapper.mapToResponseWithClock(clockService, DemoRequest.builder().build());
+        assertThat(demoResponse.getCreatedAt()).isEqualTo(MOCKNOW);
+    }
+
+    @Test
+    void mapper_should_use_passed_in_datetime() {
+        DemoResponse demoResponse = demoMapper.mapToResponseWithInstant(MOCKNOW, DemoRequest.builder().build());
         assertThat(demoResponse.getCreatedAt()).isEqualTo(MOCKNOW);
     }
 }

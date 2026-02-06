@@ -7,9 +7,9 @@ import org.springframework.stereotype.Service;
 @Service
 @AllArgsConstructor
 @Slf4j
-public class ClientService {
+public class AmpClientService {
 
     public void receiveMessage(String topicName, String subscriptionName, String message) {
-        log.info("ClientService received message:{} for {}/{}", message, topicName, subscriptionName);
+        log.info("AmpClientService received message:{} for {}/{}", message, topicName, subscriptionName);
     }
 }
