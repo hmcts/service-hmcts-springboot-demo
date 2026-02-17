@@ -23,7 +23,7 @@ services:
       SQL_SERVER: sqledge
       MSSQL_SA_PASSWORD: "Str0ngPassword!"
       ACCEPT_EULA: "Y"
-      SQL_WAIT_INTERVAL: 60
+      SQL_WAIT_INTERVAL: 60  # We need to wait for mssql / sqledge to startup which takes some time
     depends_on:
       - sqledge
     networks:

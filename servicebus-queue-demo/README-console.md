@@ -1,6 +1,6 @@
 # How can we manage azure service bus locally to assist develeopment ?
 
-We need a console that allows us to view and manage messages in Azure ServiceBus
+We ideally need a console that allows us to view and manage messages in Azure ServiceBus
 
 Options
 
