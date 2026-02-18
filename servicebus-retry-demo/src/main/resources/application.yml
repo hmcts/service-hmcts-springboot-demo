@@ -2,3 +2,4 @@ service-bus:
   admin-connection: ${SERVICE_BUS_ADMIN_CONNECTION:Endpoint=sb://localhost:5300;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;}
   connection: ${SERVICE_BUS_CONNECTION:Endpoint=sb://localhost;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;}
   retry-seconds: ${SERVICE_BUS_RETRY_SECONDS:1,2,10,60,600}
+  max-tries: ${SERVICE_BUS_MAX_TRIES:10}

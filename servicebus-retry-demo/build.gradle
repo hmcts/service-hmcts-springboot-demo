@@ -2,6 +2,7 @@ plugins {
   id("java")
   id 'org.springframework.boot' version '4.0.2'
   id 'io.spring.dependency-management' version '1.1.7'
+  id 'com.avast.gradle.docker-compose' version '0.17.20'
 }
 
 version = '1.0.0'
@@ -11,6 +12,8 @@ apply {
   from("../gradle/repositories.gradle")
   from("../gradle/java-core.gradle")
   from("../gradle/spring-core.gradle")
+  from("./unit-test.gradle")
+  from("./docker-test.gradle")
 }
 
 dependencies {

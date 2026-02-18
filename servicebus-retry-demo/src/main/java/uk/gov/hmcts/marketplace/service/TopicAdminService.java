@@ -9,6 +9,7 @@ import com.azure.messaging.servicebus.administration.models.CreateSubscriptionOp
 import com.azure.messaging.servicebus.administration.models.CreateTopicOptions;
 import com.azure.messaging.servicebus.administration.models.SubscriptionProperties;
 import com.azure.messaging.servicebus.administration.models.TopicProperties;
+import com.azure.messaging.servicebus.models.SubQueue;
 import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -63,10 +64,13 @@ public class TopicAdminService {
     }
 
     @SneakyThrows
-    public void purgeMessages(String topicName, String subscriptionName) {
-        log.info("purgeMessages {}/{}", topicName, subscriptionName);
+    public void purgeMessages(String topicName, String subscriptionName, boolean deadLetterQueue) {
+        log.info("purgeMessages {}/{} DLQ:{}", topicName, subscriptionName, deadLetterQueue);
         configService.processorClientBuilder(topicName, subscriptionName);
         ServiceBusClientBuilder.ServiceBusProcessorClientBuilder processorBuilder = configService.processorClientBuilder(topicName, subscriptionName);
+        if(deadLetterQueue){
+            processorBuilder.subQueue(SubQueue.DEAD_LETTER_QUEUE);
+        }
         processorBuilder.processMessage(context -> purgeMessage(topicName, subscriptionName, context));
         processorBuilder.processError(context -> handleError(topicName, subscriptionName, context));
 

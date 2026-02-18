@@ -25,7 +25,7 @@ public class RetryConfigService {
     public RetryConfigService(
             @Value("${service-bus.retry-seconds}") List<Integer> retryDelaySeconds
     ) {
-        log.info("RetryConfigService using retryDelaySeconds \"{}\"", retryDelaySeconds);
+        log.info("RetryConfigService using retryDelaySeconds {}", retryDelaySeconds);
         this.retryDelaySeconds = retryDelaySeconds;
     }
 }

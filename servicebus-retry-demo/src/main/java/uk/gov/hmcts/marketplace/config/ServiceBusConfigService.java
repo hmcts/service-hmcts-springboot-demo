@@ -19,18 +19,22 @@ import java.net.URL;
 @Service
 @Getter
 public class ServiceBusConfigService {
-    final int adminConnectionPort = 5300;
-    final String adminConnectionString;
-    final String connectionString;
+    private int adminConnectionPort = 5300;
+    private String adminConnectionString;
+    private String connectionString;
+    private int maxTries;
 
     public ServiceBusConfigService(
             @Value("${service-bus.admin-connection}") String adminConnectionString,
-            @Value("${service-bus.connection}") String connectionString
+            @Value("${service-bus.connection}") String connectionString,
+            @Value("${service-bus.max-tries}") int maxTries
     ) {
-        log.info("ServiceBusConfigService using adminConnectionString \"{}\"", adminConnectionString);
-        log.info("ServiceBusConfigService using connectionString \"{}\"", connectionString);
+        log.info("ServiceBusConfigService initialised with adminConnectionString \"{}\"", adminConnectionString);
+        log.info("ServiceBusConfigService initialised with connectionString \"{}\"", connectionString);
+        log.info("ServiceBusConfigService initialised with maxTries \"{}\"", maxTries);
         this.adminConnectionString = adminConnectionString;
         this.connectionString = connectionString;
+        this.maxTries = maxTries;
     }
 
     public ServiceBusClientBuilder clientBuilder() {

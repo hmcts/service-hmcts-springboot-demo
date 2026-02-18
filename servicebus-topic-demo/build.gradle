@@ -13,7 +13,6 @@ apply {
   from("../gradle/java-core.gradle")
   from("../gradle/spring-core.gradle")
   from("./unit-test.gradle")
-  from("./integration-test.gradle")
   from("./docker-test.gradle")
 }
 

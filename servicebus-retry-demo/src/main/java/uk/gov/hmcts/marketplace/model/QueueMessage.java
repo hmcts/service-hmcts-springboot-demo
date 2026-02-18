@@ -1,4 +1,4 @@
-package uk.gov.hmcts.marketplace.service;
+package uk.gov.hmcts.marketplace.model;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;

@@ -1,6 +1,6 @@
 package uk.gov.hmcts.marketplace.service;
 
-import com.azure.messaging.servicebus.ServiceBusErrorContext;
+import com.azure.messaging.servicebus.ServiceBusClientBuilder;
 import com.azure.messaging.servicebus.ServiceBusMessage;
 import com.azure.messaging.servicebus.ServiceBusProcessorClient;
 import com.azure.messaging.servicebus.ServiceBusReceivedMessageContext;
@@ -10,6 +10,7 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import uk.gov.hmcts.marketplace.config.ServiceBusConfigService;
+import uk.gov.hmcts.marketplace.model.QueueMessage;
 
 import java.util.UUID;
 
@@ -41,17 +42,18 @@ public class TopicService {
     }
 
     @SneakyThrows
-    public void startMessageProcessor(String topicName, String subscriptionName) {
-        ServiceBusProcessorClient processorClient = configService
+    public ServiceBusProcessorClient startMessageProcessor(String topicName, String subscriptionName) {
+        log.info("starting service bus processor {}/{}", topicName, subscriptionName);
+        ServiceBusClientBuilder.ServiceBusProcessorClientBuilder processorBuilder = configService
                 .clientBuilder()
                 .processor()
                 .topicName(topicName)
                 .subscriptionName(subscriptionName)
                 .processMessage(context -> handleMessage(topicName, subscriptionName, context))
-                .processError(context -> handleError(topicName, subscriptionName, context))
-                .buildProcessorClient();
-
-        process(processorClient);
+                .processError(context -> handleError(topicName, subscriptionName));
+        ServiceBusProcessorClient processorClient = processorBuilder.buildProcessorClient();
+        processorClient.start();
+        return processorClient;
     }
 
     public void handleMessage(String topicName, String subscriptionName, ServiceBusReceivedMessageContext context) {
@@ -59,21 +61,20 @@ public class TopicService {
         log.info("Processing {}/{} correlationId:{}", topicName, subscriptionName, queueMessage.getCorrelationId());
         try {
             remoteClientService.receiveMessage(topicName, subscriptionName, queueMessage.getMessage());
-        } catch (Exception e) {
+        } catch (Exception exception) {
             int failCount = queueMessage.getFailCount() + 1;
+            log.error("handleMessage correlationId:{} failCount:{} with exception.", queueMessage.getCorrelationId(), failCount, exception);
+            if (failCount >= configService.getMaxTries()) {
+                log.error("handleMessage correlationId:{} failed finally", queueMessage.getCorrelationId());
+                throw exception;
+            }
             queueMessage(topicName, queueMessage.getCorrelationId(), queueMessage.getMessage(), failCount);
             // Because we added a new message and swallowed the error then the current message will be dropped
         }
     }
 
-    public void handleError(String topicName, String subscriptionName, ServiceBusErrorContext errorContext) {
-        // We should never be called because we catch all in the messageHandler
-        log.error("handleError unexpected error on {}/{}", topicName, subscriptionName, errorContext.getException());
-    }
-
-    @SneakyThrows
-    private void process(ServiceBusProcessorClient processorClient) {
-        log.info("starting service bus processor {}/{}", processorClient.getTopicName(), processorClient.getSubscriptionName());
-        processorClient.start();
+    public void handleError(String topicName, String subscriptionName) {
+        // We should only be called when failCount has exceeded maxTries and message go to DLQ
+        log.error("handleError unexpected error on {}/{} moving to DLQ", topicName, subscriptionName);
     }
 }
