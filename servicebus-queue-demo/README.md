@@ -4,7 +4,7 @@
 1) How to nicely separate unit-test integration-test
 So that we can a) Run tests in idea b) run tests locally c) run tests in pipeline
 2) Tons of logging from docker mssql and servicebus but not seeing any spring boot logging
-
+3) Retry configuration
 
 # Rosetta macbook translation layer
 Note that to run mssql on a macbook with apple silicon we need to enable Rosetta ms emulator
@@ -13,6 +13,16 @@ Note that to run mssql on a macbook with apple silicon we need to enable Rosetta
 Docker desktop -> Settings -> General
 * Enable "Apple Virtualization Framework"
 * Enable "Use Rosetta for x86_64/amd64 emulation on Apple Silicon"
+
+
+# In order processing
+To ensure in order processing we would need to use session to group together related queue items
+The queue needs to be created with properties of RequiresSession=true
+This will force message senders to add a sessionId that groups messages together
+
+
+# Retry configuration
+There does not seem to be an easy way of setting retry configuration
 
 
 # Test Containers ? 

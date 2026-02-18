@@ -2,7 +2,7 @@ services:
   db:
     image: postgres:18-alpine
     environment:
-      POSTGRES_DB: api-test-db
+      POSTGRES_DB: api-test-db # use specific name to reduce flyway conflicts
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
@@ -10,8 +10,8 @@ services:
 
   app:
     build:
-      context: ../..
-      dockerfile: api-test-demo/docker/Dockerfile
+      context: ..
+      dockerfile: docker/Dockerfile
     environment:
       DATASOURCE_URL: jdbc:postgresql://db:5432/api-test-db
       DATASOURCE_USERNAME: postgres

@@ -1,5 +1,8 @@
 package uk.gov.hmcts.marketplace.service;
 
+import com.azure.core.amqp.AmqpRetryMode;
+import com.azure.core.amqp.AmqpRetryOptions;
+import com.azure.core.http.policy.RetryPolicy;
 import com.azure.messaging.servicebus.ServiceBusClientBuilder;
 import com.azure.messaging.servicebus.ServiceBusErrorContext;
 import com.azure.messaging.servicebus.ServiceBusMessage;
@@ -14,6 +17,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import uk.gov.hmcts.marketplace.config.ServiceBusConfigService;
 
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -35,8 +40,15 @@ public class QueueService {
     }
 
     public ServiceBusClientBuilder.ServiceBusProcessorClientBuilder processorClientBuilder(String queueName, boolean dlq) {
+        AmqpRetryOptions amqpRetryOptions = new AmqpRetryOptions();
+        amqpRetryOptions.setDelay(Duration.ofSeconds(1));
+        amqpRetryOptions.setMaxRetries(1);
+        amqpRetryOptions.setMaxDelay(Duration.ofSeconds(15));
+        amqpRetryOptions.setMode(AmqpRetryMode.EXPONENTIAL);
+        amqpRetryOptions.setTryTimeout(Duration.ofSeconds(5));
         ServiceBusClientBuilder.ServiceBusProcessorClientBuilder builder = configService
                 .clientBuilder()
+                .retryOptions(amqpRetryOptions)
                 .processor()
                 .queueName(queueName)
                 .processMessage(context -> handleMessage(queueName, context))
