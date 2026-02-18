@@ -17,6 +17,7 @@ jobs:
           # clock-demo - Not work in pipeline. Oddly
                   postgres-lock,
                   postgres-springboot4,
+                  servicebus-retry-demo,
                   servicebus-queue-demo,
                   servicebus-topic-demo ]
     runs-on: ubuntu-latest

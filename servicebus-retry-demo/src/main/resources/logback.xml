@@ -1,0 +1,16 @@
+<configuration>
+    <appender name="SIMPLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <threadName/>
+            <pattern>%d{HH:mm:ss.SSS} %-5level %thread %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+    <!-- Primary goal of this logback config is to reduce the huge noise coming from Azure SDK -->
+    <logger name="com.azure.core" level="WARN"/>
+    <logger name="com.azure.messaging" level="WARN"/>
+    <logger name="com.azure.core.amqp.implementation" level="ERROR"/>
+
+    <root level="INFO">
+        <appender-ref ref="SIMPLE"/>
+    </root>
+</configuration>
