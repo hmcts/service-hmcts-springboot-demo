@@ -19,10 +19,9 @@ import java.net.URL;
 @Service
 @Getter
 public class ServiceBusConfigService {
-    final int adminConnectionPort = 5300;
-    final String adminConnectionString;
-    final String connectionString;
-    private String adminConnectionString = "Endpoint=sb://127.0.0.1:5300;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;";
+    private int adminConnectionPort = 5300;
+    private String adminConnectionString;
+    private String connectionString;
 
     public ServiceBusConfigService(
             @Value("${service-bus.admin-connection}") String adminConnectionString,
@@ -38,10 +37,10 @@ public class ServiceBusConfigService {
         return new ServiceBusClientBuilder().connectionString(connectionString);
     }
 
+    public ServiceBusAdministrationClient adminClient() {
     HttpClient adminHttpClient = new NettyAsyncHttpClientBuilder()
             .port(adminConnectionPort)
             .build();
-
     HttpPipelinePolicy forceHttpPolicy = (context, next) -> {
         try {
             URL current = context.getHttpRequest().getUrl();
@@ -53,9 +52,17 @@ public class ServiceBusConfigService {
         return next.process();
     };
 
-    ServiceBusAdministrationClient adminClient = new ServiceBusAdministrationClientBuilder()
+        return new ServiceBusAdministrationClientBuilder()
             .connectionString(adminConnectionString)
             .httpClient(adminHttpClient)
             .addPolicy(forceHttpPolicy)
             .buildClient();
+}
+
+    public ServiceBusClientBuilder.ServiceBusProcessorClientBuilder processorClientBuilder(String topicName, String subscriptionName) {
+        return clientBuilder()
+                .processor()
+                .topicName(topicName)
+                .subscriptionName(subscriptionName);
+    }
 }
