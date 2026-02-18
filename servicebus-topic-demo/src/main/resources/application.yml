@@ -1,2 +1,3 @@
 service-bus:
+  admin-connection: ${SERVICE_BUS_ADMIN_CONNECTION:Endpoint=sb://localhost:5300;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;}
   connection: ${SERVICE_BUS_CONNECTION:Endpoint=sb://localhost;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;}

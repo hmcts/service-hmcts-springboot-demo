@@ -29,29 +29,6 @@ public class TopicIntegrationTestBase {
     ServiceBusConfigService configService;
     @Autowired
     TopicService topicService;
-    private int adminConnectionPort = 5300;
-    private String adminConnectionString = "Endpoint=sb://127.0.0.1:5300;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;";
-
-    HttpClient adminHttpClient = new NettyAsyncHttpClientBuilder()
-            .port(adminConnectionPort)
-            .build();
-
-    HttpPipelinePolicy forceHttpPolicy = (context, next) -> {
-        try {
-            URL current = context.getHttpRequest().getUrl();
-            URL httpUrl = new URL("http", current.getHost(), adminConnectionPort, current.getFile());
-            context.getHttpRequest().setUrl(httpUrl);
-        } catch (MalformedURLException e) {
-            return Mono.error(e);
-        }
-        return next.process();
-    };
-
-    ServiceBusAdministrationClient adminClient = new ServiceBusAdministrationClientBuilder()
-            .connectionString(adminConnectionString)
-            .httpClient(adminHttpClient)
-            .addPolicy(forceHttpPolicy)
-            .buildClient();
 
     String topicName = "topic.1";
     String subscription1 = "subscription.1";
@@ -61,7 +38,7 @@ public class TopicIntegrationTestBase {
 
     protected boolean isServiceBusReady() {
         try {
-            adminClient.listTopics().stream().map(TopicProperties::getName).toList();
+            configService.adminClient().listTopics().stream().map(TopicProperties::getName).toList();
             return true;
         } catch (Exception e) {
             log.info("waiting for servicebus to start");

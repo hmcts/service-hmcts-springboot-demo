@@ -11,6 +11,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.web.client.HttpClientErrorException;
 import uk.gov.hmcts.marketplace.service.RemoteClientService;
+import uk.gov.hmcts.marketplace.service.TopicAdminService;
 import uk.gov.hmcts.marketplace.service.TopicService;
 
 import java.time.Duration;
@@ -32,6 +33,8 @@ import static org.mockito.Mockito.verify;
 public class TopicIntegrationTest extends TopicIntegrationTestBase {
 
     @Autowired
+    TopicAdminService adminService;
+    @Autowired
     TopicService topicService;
 
     @MockitoBean
@@ -43,8 +46,8 @@ public class TopicIntegrationTest extends TopicIntegrationTestBase {
                 .atMost(Duration.ofSeconds(60))
                 .pollInterval(Duration.ofSeconds(1))
                 .until(this::isServiceBusReady);
-        createTopicAndSubscription(topicName, subscription1);
-        createTopicAndSubscription(topicName, subscription2);
+        adminService.createTopicAndSubscription(topicName, subscription1);
+        adminService.createTopicAndSubscription(topicName, subscription2);
         purgeMessages(topicName, subscription1);
         purgeMessages(topicName, subscription2);
     }
@@ -108,22 +111,5 @@ public class TopicIntegrationTest extends TopicIntegrationTestBase {
 
     private String randomMessage() {
         return String.format("My message %04d", new Random().nextInt(1000));
-    }
-
-    private void createTopicAndSubscription(String topicName, String subscriptionName) {
-        if (!adminClient.getTopicExists(topicName)) {
-            CreateTopicOptions createTopicOptions = new CreateTopicOptions();
-            createTopicOptions.setDefaultMessageTimeToLive(Duration.ofHours(1));
-            createTopicOptions.setDuplicateDetectionRequired(false);
-            adminClient.createTopic(topicName, createTopicOptions);
-        }
-        if (!adminClient.getSubscriptionExists(topicName, subscriptionName)) {
-            CreateSubscriptionOptions options = new CreateSubscriptionOptions();
-            options.setDeadLetteringOnMessageExpiration(true);
-            options.setDefaultMessageTimeToLive(Duration.ofHours(1));
-            options.setLockDuration(Duration.ofMinutes(1));
-            options.setMaxDeliveryCount(3);
-            adminClient.createSubscription(topicName, subscriptionName, options);
-        }
     }
 }
