@@ -11,7 +11,7 @@ import java.time.ZoneOffset;
 @AllArgsConstructor
 public class ClockService {
 
-    Clock clock;
+    private Clock clock;
 
     // we use a ClockService to expose the clock time in a simple method
     public OffsetDateTime now() {

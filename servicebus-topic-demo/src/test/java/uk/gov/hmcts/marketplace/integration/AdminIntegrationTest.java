@@ -1,21 +1,16 @@
 package uk.gov.hmcts.marketplace.integration;
 
-import com.azure.core.http.HttpClient;
-import com.azure.core.http.netty.NettyAsyncHttpClientBuilder;
-import com.azure.core.http.policy.HttpPipelinePolicy;
-import com.azure.messaging.servicebus.administration.ServiceBusAdministrationClient;
-import com.azure.messaging.servicebus.administration.ServiceBusAdministrationClientBuilder;
 import com.azure.messaging.servicebus.administration.models.CreateSubscriptionOptions;
 import com.azure.messaging.servicebus.administration.models.CreateTopicOptions;
 import com.azure.messaging.servicebus.administration.models.SubscriptionProperties;
 import com.azure.messaging.servicebus.administration.models.TopicProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import reactor.core.publisher.Mono;
+import uk.gov.hmcts.marketplace.config.ServiceBusConfigService;
+import uk.gov.hmcts.marketplace.service.TopicAdminService;
 
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.time.Duration;
 import java.util.List;
 
@@ -25,12 +20,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest
 public class AdminIntegrationTest extends TopicIntegrationTestBase {
 
+    @Autowired
+    ServiceBusConfigService configService;
+    @Autowired
+    TopicAdminService adminService;
+
     @Test
     void admin_console_should_get_topics_andsubscriptions() {
-        List<String> topics = adminClient.listTopics().stream().map(TopicProperties::getName).toList();
+        List<String> topics = configService.adminClient().listTopics().stream().map(TopicProperties::getName).toList();
         assertThat(topics).isEqualTo(List.of("topic.1"));
 
-        List<String> subscriptions = adminClient.listSubscriptions(topicName).stream().map(SubscriptionProperties::getSubscriptionName).toList();
+        List<String> subscriptions = configService.adminClient().listSubscriptions(topicName).stream().map(SubscriptionProperties::getSubscriptionName).toList();
         assertThat(subscriptions).isEqualTo(List.of("subscription.1", "subscription.2"));
 
         // SADLY, We cannot currently get runtime properties for a subscription in emulator. It seems that activeMessageCount and other counts are null
@@ -44,16 +44,16 @@ public class AdminIntegrationTest extends TopicIntegrationTestBase {
         CreateTopicOptions createTopicOptions = new CreateTopicOptions();
         createTopicOptions.setDefaultMessageTimeToLive(Duration.ofHours(1));
         createTopicOptions.setDuplicateDetectionRequired(false);
-        adminClient.createTopic("topic.new", createTopicOptions);
+        configService.adminClient().createTopic("topic.new", createTopicOptions);
 
         CreateSubscriptionOptions options = new CreateSubscriptionOptions();
         options.setDeadLetteringOnMessageExpiration(true);
         options.setDefaultMessageTimeToLive(Duration.ofHours(1));
         options.setLockDuration(Duration.ofMinutes(1));
         options.setMaxDeliveryCount(3);
-        adminClient.createSubscription("topic.new", "subscription.new", options);
+        configService.adminClient().createSubscription("topic.new", "subscription.new", options);
 
-        adminClient.deleteSubscription("topic.new", "subscription.new");
-        adminClient.deleteTopic("topic.new");
+        configService.adminClient().deleteSubscription("topic.new", "subscription.new");
+        configService.adminClient().deleteTopic("topic.new");
     }
 }
