@@ -22,7 +22,7 @@ import java.util.concurrent.TimeUnit;
 public class TopicService {
 
     private ServiceBusConfigService configService;
-    private AmpClientService ampClientService;
+    private RemoteClientService remoteClientService;
 
     /**
      * Processing messages from queue or topic-subscriber we can either
@@ -86,7 +86,7 @@ public class TopicService {
     public void handleMessage(String topicName, String subscriptionName, ServiceBusReceivedMessageContext context) {
         ServiceBusReceivedMessage message = context.getMessage();
         log.info("Processing {}/{} messageId:{} deliveryCount:{}", topicName, subscriptionName, message.getMessageId(), message.getDeliveryCount());
-        ampClientService.receiveMessage(topicName, subscriptionName, String.valueOf(message.getBody()));
+        remoteClientService.receiveMessage(topicName, subscriptionName, String.valueOf(message.getBody()));
     }
 
     public void handleError(String topicName, String subscriptionName, ServiceBusErrorContext context) {

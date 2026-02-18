@@ -10,7 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.web.client.HttpClientErrorException;
-import uk.gov.hmcts.marketplace.service.AmpClientService;
+import uk.gov.hmcts.marketplace.service.RemoteClientService;
 import uk.gov.hmcts.marketplace.service.TopicService;
 
 import java.time.Duration;
@@ -35,7 +35,7 @@ public class TopicIntegrationTest extends TopicIntegrationTestBase {
     TopicService topicService;
 
     @MockitoBean
-    AmpClientService ampClientService;
+    RemoteClientService remoteClientService;
 
     @BeforeEach
     void setUp() {
@@ -58,8 +58,8 @@ public class TopicIntegrationTest extends TopicIntegrationTestBase {
 
         topicService.processMessages(topicName, subscription1, 500);
 
-        verify(ampClientService).receiveMessage(topicName, subscription1, message1);
-        verify(ampClientService).receiveMessage(topicName, subscription1, message2);
+        verify(remoteClientService).receiveMessage(topicName, subscription1, message1);
+        verify(remoteClientService).receiveMessage(topicName, subscription1, message2);
     }
 
     @Test
@@ -67,14 +67,14 @@ public class TopicIntegrationTest extends TopicIntegrationTestBase {
         topicService.sendMessage(topicName, message);
 
         log.info("getting messages ... {} sends and then should fail to DLQ", maxDeliveryCount);
-        doThrow(HttpClientErrorException.class).when(ampClientService).receiveMessage(topicName, subscription1, message);
+        doThrow(HttpClientErrorException.class).when(remoteClientService).receiveMessage(topicName, subscription1, message);
         topicService.processMessages(topicName, subscription1, 500);
-        verify(ampClientService, times(maxDeliveryCount)).receiveMessage(topicName, subscription1, message);
+        verify(remoteClientService, times(maxDeliveryCount)).receiveMessage(topicName, subscription1, message);
 
         log.info("reprocessing messages from DLQ just once");
-        reset(ampClientService);
+        reset(remoteClientService);
         topicService.processDeadLetterMessages(topicName, subscription1, 500);
-        verify(ampClientService).receiveMessage(topicName, subscription1 + "-DLQ", message);
+        verify(remoteClientService).receiveMessage(topicName, subscription1 + "-DLQ", message);
     }
 
     @SneakyThrows
@@ -93,7 +93,7 @@ public class TopicIntegrationTest extends TopicIntegrationTestBase {
         TimeUnit.MILLISECONDS.sleep(processingMilliSecs);
         executor.shutdown();
 
-        verify(ampClientService, times(numberOfMessages)).receiveMessage(eq(topicName), eq(subscription1), anyString());
+        verify(remoteClientService, times(numberOfMessages)).receiveMessage(eq(topicName), eq(subscription1), anyString());
     }
 
 
