@@ -12,8 +12,8 @@ apply {
   from("../gradle/repositories.gradle")
   from("../gradle/java-core.gradle")
   from("../gradle/spring-core.gradle")
-  from("./unit-test.gradle")
-  from("./docker-test.gradle")
+  // from("./unit-test.gradle")
+  //from("./docker-test.gradle")
 }
 
 dependencies {
