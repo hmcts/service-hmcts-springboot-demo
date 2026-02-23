@@ -15,3 +15,6 @@ Sometimes we need to configure the mapper to handle dates in our preferred forma
 
 ... TBC would like a global mapper to be available across our app to avoid duplication and differing styles
 
+Using jackson fasterxml ObjectMapper is a pain because it declares to throw JsonProcessingException
+Whilst Gson and jackson databind ObjectMapper do not. 
+They assume that its given that you know the data format has to be correct else it will throw.
