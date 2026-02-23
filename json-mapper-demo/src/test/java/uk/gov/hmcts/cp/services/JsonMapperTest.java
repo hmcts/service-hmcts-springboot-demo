@@ -1,6 +1,8 @@
 package uk.gov.hmcts.cp.services;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.jayway.jsonpath.JsonPath;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -79,6 +81,16 @@ class JsonMapperTest {
         assertThat(exampleAgain).usingRecursiveComparison().isEqualTo(example);
     }
 
+    @Test
+    void mapper_should_create_json_node(){
+        String json = "{\"key\":\"value\"}";
+        JsonNode jsonNode = jsonMapper.toJsonNode(json);
+        assertThat(jsonNode.get("key").textValue()).isEqualTo("value");
+    }
+
+    /**
+     * Embedded data classes to support this Test
+     */
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor

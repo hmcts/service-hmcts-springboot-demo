@@ -1,20 +1,11 @@
 # Mapping
 
-In our rest endpoints we do a lot of mapping between objects in different layers
-We try to avoid exposing objects from the layer below
-i.e. We do not expose repository entity fields out to consumers
-Instead we map to a more neutral object
-
-Sometimes the mapping may feel pointless as we may have the same fields on both sides
-In this case we can and should use MapStruct to get the mappings for free with the minimum of code
-
-Often we map between java objects and json strings
+Often we map between java objects and json strings so we can serialise a java object before we pass it around
+or store it.
 We have various tools for doing this with the most common being Jackson and Gson.
 
-Sometimes we need to configure the mapper to handle dates in our preferred format which is UTC
+We use a jackson fasterxml to do this
+It makes sense to use a common mapper service to do this to ensure it behaves consistently.
+In particular we need to configure the mapper to handle dates in our preferred format which is UTC
+( The jackson default for date is as a long value )
 
-... TBC would like a global mapper to be available across our app to avoid duplication and differing styles
-
-Using jackson fasterxml ObjectMapper is a pain because it declares to throw JsonProcessingException
-Whilst Gson and jackson databind ObjectMapper do not. 
-They assume that its given that you know the data format has to be correct else it will throw.
