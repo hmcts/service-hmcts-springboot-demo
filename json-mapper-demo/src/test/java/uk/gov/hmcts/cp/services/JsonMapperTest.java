@@ -14,6 +14,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -86,6 +87,15 @@ class JsonMapperTest {
         JsonNode jsonNode = jsonMapper.toJsonNode(json);
         assertThat(jsonNode.at("/listEmbeddedExample/0/stringField").textValue()).isEqualTo("some text");
         assertThat(jsonNode.at("/listEmbeddedExample/0/dateField").textValue()).isEqualTo("2026-01-31T12:30:45.0000005Z");
+    }
+
+    @Test
+    void mapper_should_get_uuid() {
+        String json = "{\"uuid\":\"4c721325-a1b2-4cd5-a28f-e9e0e59502ef\"}";
+        assertThat(jsonMapper.getUuidAtJsonPointer(json, "/uuid"))
+                .isEqualTo(UUID.fromString("4c721325-a1b2-4cd5-a28f-e9e0e59502ef"));
+
+        assertThat(jsonMapper.getUuidAtJsonPointer("{}", "/uuid")).isNull();
     }
 
     /**
