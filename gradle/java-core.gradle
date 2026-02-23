@@ -37,6 +37,8 @@ dependencies {
   testCompileOnly group: 'org.projectlombok', name: 'lombok', version: lombokVersion
   testAnnotationProcessor group: 'org.projectlombok', name: 'lombok', version: lombokVersion
 
+  implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+
   implementation "org.mapstruct:mapstruct:$mapstructVersion"
   annotationProcessor "org.mapstruct:mapstruct-processor:$mapstructVersion"
 }
