@@ -2,7 +2,6 @@ package uk.gov.hmcts.cp.services;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.jayway.jsonpath.JsonPath;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -82,10 +81,11 @@ class JsonMapperTest {
     }
 
     @Test
-    void mapper_should_create_json_node(){
-        String json = "{\"key\":\"value\"}";
+    void mapper_should_create_json_node() {
+        String json = "{\"listEmbeddedExample\":[{\"stringField\":\"some text\",\"dateField\":\"2026-01-31T12:30:45.0000005Z\"}]}";
         JsonNode jsonNode = jsonMapper.toJsonNode(json);
-        assertThat(jsonNode.get("key").textValue()).isEqualTo("value");
+        assertThat(jsonNode.at("/listEmbeddedExample/0/stringField").textValue()).isEqualTo("some text");
+        assertThat(jsonNode.at("/listEmbeddedExample/0/dateField").textValue()).isEqualTo("2026-01-31T12:30:45.0000005Z");
     }
 
     /**
