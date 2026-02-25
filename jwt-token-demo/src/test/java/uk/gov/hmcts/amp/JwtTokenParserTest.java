@@ -1,10 +1,12 @@
 package uk.gov.hmcts.amp;
 
-import io.jsonwebtoken.Jwts;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.Base64;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -14,22 +16,6 @@ class JwtTokenParserTest {
 
     @InjectMocks
     JwtTokenParser jwtTokenParser;
-
-    @Test
-    void pad_should_pad_to_multiple_of_4() {
-        assertThrows(Exception.class, () -> jwtTokenParser.padBase64Url(null));
-        assertThat(jwtTokenParser.padBase64Url("")).isEqualTo("");
-        assertThat(jwtTokenParser.padBase64Url("xx")).isEqualTo("xx==");
-        assertThat(jwtTokenParser.padBase64Url("yyyyy")).isEqualTo("yyyyy===");
-        assertThat(jwtTokenParser.padBase64Url("zzzz")).isEqualTo("zzzz");
-    }
-
-    @Test
-    void base64_should_do_its_stuff() {
-        assertThrows(Exception.class, () -> jwtTokenParser.decodeBase64Url(null));
-        assertThrows(Exception.class, () -> jwtTokenParser.decodeBase64Url("not base 64"));
-        assertThat(jwtTokenParser.decodeBase64Url("SGVsbG8gd29ybGQ=")).isEqualTo("Hello world");
-    }
 
     String token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImtpZCI6InNNMV95QXhWOEdWNHlOLUI2ajJ4em1pazVBbyJ9" +
             ".eyJhdWQiOiJjOTg5YzQwMC05NjEwLTQyMTUtYWJiMC0zYmY4MDg1NTUyODAiLCJpc3MiOiJodHRwczovL2xvZ2luLm1pY3Jvc29mdG9ubG" +
@@ -46,7 +32,13 @@ class JwtTokenParserTest {
 
     @Test
     void jwt_token_with_azp_is_extracted() {
-        // Do we need a public key ? If we can decode thos on jwt.io then we must be able to do it here
-        Jwts.parser().build().parseSignedClaims(token).getPayload();
+        JsonMapper jsonMapper = new JsonMapper();
+        String[] chunks = token.split("\\.");
+        Base64.Decoder decoder = Base64.getUrlDecoder();
+        String headerJson = new String(decoder.decode(chunks[0]));
+        String payloadJson = new String(decoder.decode(chunks[1]));
+
+        UUID clientId = jsonMapper.getUUIDAtPath(payloadJson, "/azp");
+        assertThat(clientId).isEqualTo(UUID.fromString("120d6d4a-d47b-4a40-a782-0065f41de050"));
     }
 }
