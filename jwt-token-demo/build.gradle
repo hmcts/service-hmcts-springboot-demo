@@ -14,4 +14,5 @@ apply {
 }
 
 dependencies {
+  implementation 'io.jsonwebtoken:jjwt:0.13.0'
 }
