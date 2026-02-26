@@ -8,6 +8,8 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import lombok.SneakyThrows;
 import org.springframework.stereotype.Service;
 
+import java.util.UUID;
+
 @Service
 public class JsonMapper {
 
@@ -33,5 +35,11 @@ public class JsonMapper {
     @SneakyThrows
     public JsonNode toJsonNode(String json) {
         return objectMapper.readTree(json);
+    }
+
+    @SneakyThrows
+    public UUID getUUIDAtPath(final String json, final String jsonPointer) {
+        final String uuid = toJsonNode(json).at(jsonPointer).textValue();
+        return uuid == null ? null : UUID.fromString(uuid);
     }
 }
