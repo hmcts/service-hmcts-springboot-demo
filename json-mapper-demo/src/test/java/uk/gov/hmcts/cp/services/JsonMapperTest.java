@@ -1,6 +1,7 @@
 package uk.gov.hmcts.cp.services;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.JsonNode;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -13,6 +14,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -77,6 +79,20 @@ class JsonMapperTest {
 
         Example exampleAgain = jsonMapper.fromJson(json, Example.class);
         assertThat(exampleAgain).usingRecursiveComparison().isEqualTo(example);
+    }
+
+    @Test
+    void json_node_pointer_should_get_field_value() {
+        String json = "{\"listEmbeddedExample\":[{\"stringField\":\"some text\",\"dateField\":\"2026-01-31T12:30:45.0000005Z\"}]}";
+        JsonNode jsonNode = jsonMapper.toJsonNode(json);
+        assertThat(jsonNode.at("/listEmbeddedExample/0/stringField").textValue()).isEqualTo("some text");
+    }
+
+    @Test
+    void json_node_should_get_uuid_field() {
+        String json = "{\"listEmbeddedExample\":[{\"uuidField\":\"b31fd44a-dde3-4585-a38c-98d6636aef6a\"}]}";
+        UUID uuid = jsonMapper.getUUIDAtPath(json, "/listEmbeddedExample/0/uuidField");
+        assertThat(uuid).isEqualTo(UUID.fromString("b31fd44a-dde3-4585-a38c-98d6636aef6a"));
     }
 
     @Builder

@@ -2,20 +2,15 @@ package uk.gov.hmcts.amp;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Base64;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @ExtendWith(MockitoExtension.class)
 class JwtTokenParserTest {
-
-    @InjectMocks
-    JwtTokenParser jwtTokenParser;
 
     String token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImtpZCI6InNNMV95QXhWOEdWNHlOLUI2ajJ4em1pazVBbyJ9" +
             ".eyJhdWQiOiJjOTg5YzQwMC05NjEwLTQyMTUtYWJiMC0zYmY4MDg1NTUyODAiLCJpc3MiOiJodHRwczovL2xvZ2luLm1pY3Jvc29mdG9ubG" +

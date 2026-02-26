@@ -14,6 +14,7 @@ jobs:
                   audit-filter-demo,
                   auth-filter-demo,
                   json-mapper-demo,
+                  jwt-token-demo,
                   exception-handling-demo,
                   openapi-client-demo,
           # clock-demo - Not work in pipeline. Oddly
