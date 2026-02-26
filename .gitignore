@@ -9,5 +9,3 @@ bin/*
 *.log
 *.jar
 *.patch
-!**/gradle-wrapper.properties
-!**/gradle-wrapper.jar
