@@ -31,9 +31,10 @@ jobs:
       - name: Module tests
         run: |
           env
-          echo "APIHUB_ORGANISATION : \"${APIHUB_ORGANISATION}\""
-          echo "AZURE_STORAGE_CONNECTION_STRING1 is set to \"${AZURE_STORAGE_CONNECTION_STRING1}\""
-          echo "AZURE_STORAGE_CONNECTION_STRING2 is set to \"${AZURE_STORAGE_CONNECTION_STRING2}\""
+          echo "env.APIHUB_ORGANISATION : \"${{ env.APIHUB_ORGANISATION }}\""
+          echo "env.AZURE_STORAGE_CONNECTION_STRING is set to \"${{ env.AZURE_STORAGE_CONNECTION_STRING }}\""
+          echo "env.AZURE_STORAGE_CONNECTION_STRING is set to \"${{env.AZURE_STORAGE_CONNECTION_STRING}}\""
+          echo "env.AZURE_STORAGE_CONNECTION_STRING is set to \"${env.AZURE_STORAGE_CONNECTION_STRING}\""
           cd ${{ matrix.module }}
           pwd
           ./gradlew clean test
