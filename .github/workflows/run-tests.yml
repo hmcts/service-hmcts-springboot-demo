@@ -30,6 +30,7 @@ jobs:
 
       - name: Module tests
         run: |
+          echo "COLIN_TEST env variable ${COLIN_TEST}"
           cd ${{ matrix.module }}
           pwd
           ./gradlew clean test
