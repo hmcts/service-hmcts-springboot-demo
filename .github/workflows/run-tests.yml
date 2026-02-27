@@ -32,7 +32,6 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Module tests
-        env:
         run: |
           env
           echo "vars.AZURE_STORAGE_CONNECTION_STRING is set to \"${{ vars.AZURE_STORAGE_CONNECTION_STRING }}\""
