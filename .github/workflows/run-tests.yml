@@ -24,17 +24,19 @@ jobs:
                   servicebus-queue-demo,
                   servicebus-topic-demo ]
     runs-on: ubuntu-latest
+    env:
+      AZURE_STORAGE_CONNECTION_STRING: ${{ vars.AZURE_STORAGE_CONNECTION_STRING }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
 
       - name: Module tests
+        env:
         run: |
           env
-          echo "env.APIHUB_ORGANISATION : \"${{ env.APIHUB_ORGANISATION }}\""
-          echo "env.AZURE_STORAGE_CONNECTION_STRING is set to \"${{ env.AZURE_STORAGE_CONNECTION_STRING }}\""
-          echo "env.AZURE_STORAGE_CONNECTION_STRING is set to \"${{env.AZURE_STORAGE_CONNECTION_STRING}}\""
-          echo "env.AZURE_STORAGE_CONNECTION_STRING is set to \"${env.AZURE_STORAGE_CONNECTION_STRING}\""
+          echo "vars.AZURE_STORAGE_CONNECTION_STRING is set to \"${{ vars.AZURE_STORAGE_CONNECTION_STRING }}\""
+          echo "AZURE_STORAGE_CONNECTION_STRING is set to \"${AZURE_STORAGE_CONNECTION_STRING}\""
           cd ${{ matrix.module }}
           pwd
           ./gradlew clean test
