@@ -30,7 +30,7 @@ jobs:
 
       - name: Module tests
         run: |
-          echo "COLIN_TEST env variable ${COLIN_TEST}"
+          echo "AZURE_STORAGE_CONNECTION_STRING is set to \"${AZURE_STORAGE_CONNECTION_STRING=}\""
           cd ${{ matrix.module }}
           pwd
           ./gradlew clean test
