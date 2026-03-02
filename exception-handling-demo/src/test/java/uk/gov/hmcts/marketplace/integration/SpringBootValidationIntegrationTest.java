@@ -12,7 +12,6 @@ import org.springframework.web.servlet.NoHandlerFoundException;
 import uk.gov.hmcts.marketplace.services.ExampleService;
 
 import java.util.Set;
-import java.util.UUID;
 
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -28,7 +27,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
 @Slf4j
-class ExampleByPathValidationIntegrationTest {
+class SpringBootValidationIntegrationTest {
 
     @Resource
     private MockMvc mockMvc;
@@ -36,7 +35,7 @@ class ExampleByPathValidationIntegrationTest {
     @MockitoBean
     ExampleService exampleService;
 
-    UUID uuid = UUID.randomUUID();
+    Long exampleId = 1234L;
 
     @Test
     void random_url_should_be_404() throws Exception {
@@ -65,9 +64,9 @@ class ExampleByPathValidationIntegrationTest {
     @Test
     void no_handler_found_should_be_400() throws Exception {
         NoHandlerFoundException e = new NoHandlerFoundException("GET", "any-url", null);
-        when(exampleService.example(uuid)).thenThrow(e);
+        when(exampleService.getExample(exampleId)).thenThrow(e);
         mockMvc
-                .perform(get("/by-path/{id}", "not-a-uuid"))
+                .perform(get("/by-path/{id}", "not-a-long"))
                 .andDo(print())
                 .andExpect(status().isBadRequest());
     }
@@ -75,9 +74,9 @@ class ExampleByPathValidationIntegrationTest {
     @Test
     void constraint_violation_should_be_400() throws Exception {
         ConstraintViolationException e = new ConstraintViolationException(Set.of());
-        when(exampleService.example(uuid)).thenThrow(e);
+        when(exampleService.getExample(exampleId)).thenThrow(e);
         mockMvc
-                .perform(get("/by-path/{id}", "not-a-uuid"))
+                .perform(get("/by-path/{id}", "not-a-long"))
                 .andDo(print())
                 .andExpect(status().isBadRequest());
     }
