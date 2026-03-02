@@ -15,6 +15,7 @@ import java.util.Set;
 
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -55,7 +56,7 @@ class OpenApiSpecValidationIntegrationTest {
 
     @Test
     void no_handler_found_should_be_400() throws Exception {
-        NoHandlerFoundException e = new NoHandlerFoundException("GET", "any-url", null);
+        Exception e = new NoHandlerFoundException("GET", "any-url", null);
         when(exampleService.getExample(exampleId)).thenThrow(e);
         mockMvc
                 .perform(get("/example/{id}", exampleId))
@@ -65,11 +66,28 @@ class OpenApiSpecValidationIntegrationTest {
 
     @Test
     void constraint_violation_should_be_400() throws Exception {
-        ConstraintViolationException e = new ConstraintViolationException(Set.of());
+        Exception e = new ConstraintViolationException(Set.of());
         when(exampleService.getExample(exampleId)).thenThrow(e);
         mockMvc
                 .perform(get("/example/{id}", exampleId))
                 .andDo(print())
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void method_invalid_should_be_405() throws Exception {
+        mockMvc
+                .perform(put("/example/{id}", exampleId))
+                .andDo(print())
+                .andExpect(status().isMethodNotAllowed());
+    }
+
+    @Test
+    void unsupported_media_type_invalid_should_be_405() throws Exception {
+        mockMvc
+                .perform(get("/example/{id}", exampleId)
+                        .header("content-type", "application/xml"))
+                .andDo(print())
+                .andExpect(status().isMethodNotAllowed());
     }
 }
