@@ -25,7 +25,7 @@ jobs:
                   servicebus-topic-demo ]
     runs-on: ubuntu-latest
     env:
-      AZURE_STORAGE_CONNECTION_STRING: ${{ vars.AZURE_STORAGE_CONNECTION_STRING }}
+      APIHUB_ORGANISATION: ${{ vars.APIHUB_ORGANISATION }}
 
     steps:
       - name: Checkout code
@@ -34,8 +34,8 @@ jobs:
       - name: Module tests
         run: |
           env
-          echo "vars.AZURE_STORAGE_CONNECTION_STRING is set to \"${{ vars.AZURE_STORAGE_CONNECTION_STRING }}\""
-          echo "AZURE_STORAGE_CONNECTION_STRING is set to \"${AZURE_STORAGE_CONNECTION_STRING}\""
+          echo "vars.APIHUB_ORGANISATION is set to \"${{ vars.APIHUB_ORGANISATION }}\""
+          echo "APIHUB_ORGANISATION is set to \"${APIHUB_ORGANISATION}\""
           cd ${{ matrix.module }}
           pwd
           ./gradlew clean test
