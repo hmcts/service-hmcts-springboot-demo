@@ -1,0 +1,10 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  application:
+    name: notify-server
+
+# Delay (ms) before sending callback so the client has time to receive the 202 and store the secret
+notify:
+  callback-delay-ms: ${CALLBACK_DELAY_MS:500}
