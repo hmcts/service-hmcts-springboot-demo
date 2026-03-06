@@ -7,10 +7,38 @@ plugins {
 version = '1.0.0'
 group = 'uk.gov.hmcts.marketplace'
 
+java {
+  toolchain {
+    languageVersion = JavaLanguageVersion.of(25)
+  }
+}
+
+test {
+  useJUnitPlatform()
+  include '**/*Test.class'
+}
+
 apply {
-  from("../gradle/java-core.gradle")
+  from("../gradle/repositories.gradle")
   from("../gradle/spring-core.gradle")
 }
 
 dependencies {
+  // Api spec
+  implementation("uk.gov.hmcts.cp:api-hmcts-crime-template:2.0.2")
+
+  // Java core
+  implementation 'net.logstash.logback:logstash-logback-encoder:8.1'
+  implementation 'org.apache.logging.log4j:log4j-to-slf4j'
+  implementation 'ch.qos.logback:logback-classic'
+  implementation 'ch.qos.logback:logback-core'
+  implementation 'org.owasp.encoder:encoder:1.2.3'
+
+  compileOnly 'org.projectlombok:lombok:1.18.42'
+  annotationProcessor 'org.projectlombok:lombok:1.18.42'
+  testCompileOnly 'org.projectlombok:lombok:1.18.42'
+  testAnnotationProcessor 'org.projectlombok:lombok:1.18.42'
+
+  implementation 'org.mapstruct:mapstruct:1.5.5.Final'
+  annotationProcessor 'org.mapstruct:mapstruct-processor:1.5.5.Final'
 }

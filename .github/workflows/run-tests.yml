@@ -24,12 +24,18 @@ jobs:
                   servicebus-queue-demo,
                   servicebus-topic-demo ]
     runs-on: ubuntu-latest
+    env:
+      APIHUB_ORGANISATION: ${{ vars.APIHUB_ORGANISATION }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
 
       - name: Module tests
         run: |
+          env
+          echo "vars.APIHUB_ORGANISATION is set to \"${{ vars.APIHUB_ORGANISATION }}\""
+          echo "APIHUB_ORGANISATION is set to \"${APIHUB_ORGANISATION}\""
           cd ${{ matrix.module }}
           pwd
           ./gradlew clean test
