@@ -11,7 +11,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ExampleService {
 
-    public UUID example(UUID id) throws Exception {
+    public long getExample(long id) throws Exception {
         log.info("Service called for id:{}", id);
         return id;
     }
