@@ -2,7 +2,6 @@ package uk.gov.hmcts.cp.demo.audit.filter;
 
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.AppenderBase;
-import org.springframework.jms.core.JmsTemplate;
 
 /**
  * Logback appender that sends audit log messages to an Apache Artemis JMS queue.
