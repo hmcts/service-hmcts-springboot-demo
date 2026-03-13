@@ -3,17 +3,29 @@
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
     <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
 
-    <appender name="AUDIT" class="ch.qos.logback.core.ConsoleAppender">
+    <!-- Audit logs go to Apache Artemis queue (see ArtemisAuditAppender) -->
+    <appender name="AUDIT_ARTEMIS" class="uk.gov.hmcts.cp.demo.audit.filter.ArtemisAuditAppender"/>
+
+    <!-- Async wrapper: JMS send runs on a background thread so request handling is not blocked -->
+    <appender name="AUDIT_ASYNC" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>512</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <includeCallerData>false</includeCallerData>
+        <appender-ref ref="AUDIT_ARTEMIS"/>
+    </appender>
+
+    <!-- Console: so you can see audit JSON in the console when testing -->
+    <appender name="AUDIT_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <!-- Output only the message (JSON) and newline so audit logs stay as pure JSON -->
-            <pattern>%msg%n</pattern>
+            <pattern>[AUDIT] %msg%n</pattern>
             <charset>UTF-8</charset>
         </encoder>
     </appender>
 
-    <!-- Dedicated audit logger: all logs to this logger go to AUDIT appender only -->
+    <!-- Dedicated audit logger: to Artemis (async) and to console -->
     <logger name="AUDIT" level="INFO" additivity="false">
-        <appender-ref ref="AUDIT"/>
+        <appender-ref ref="AUDIT_ASYNC"/>
+        <appender-ref ref="AUDIT_CONSOLE"/>
     </logger>
 
     <root level="INFO">

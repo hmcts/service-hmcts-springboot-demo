@@ -21,6 +21,12 @@ repositories {
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter'
     implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-artemis'
+    // Embedded Artemis broker (exclude javax JMS client so Jakarta client from starter is used)
+    implementation('org.apache.activemq:artemis-jms-server') {
+        exclude group: 'org.apache.activemq', module: 'artemis-jms-client'
+    }
+    implementation 'org.apache.activemq:artemis-server'
     implementation 'com.fasterxml.jackson.core:jackson-databind'
     developmentOnly 'org.springframework.boot:spring-boot-docker-compose'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'

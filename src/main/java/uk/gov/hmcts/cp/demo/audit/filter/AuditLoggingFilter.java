@@ -63,6 +63,7 @@ public class AuditLoggingFilter extends OncePerRequestFilter {
                           ContentCachingResponseWrapper response) {
         try {
             Map<String, Object> audit = new HashMap<>();
+            audit.put("loggerName", AUDIT_LOGGER_NAME);
             audit.put("timestamp", Instant.now().toString());
             audit.put("request", buildRequestPayload(request));
             audit.put("response", buildResponsePayload(response));
