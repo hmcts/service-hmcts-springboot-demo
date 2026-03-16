@@ -1,6 +1,6 @@
 java {
   toolchain {
-    languageVersion.set(JavaLanguageVersion.of(21))
+    languageVersion.set(JavaLanguageVersion.of(25))
   }
 }
 
@@ -43,6 +43,6 @@ dependencies {
   annotationProcessor "org.mapstruct:mapstruct-processor:$mapstructVersion"
 }
 
-tasks.named('wrapper') {
+tasks.withType(Wrapper).configureEach {
   delete "${projectDir}/gradlew.bat"
 }

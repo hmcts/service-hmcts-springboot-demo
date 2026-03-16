@@ -69,7 +69,7 @@ public class NotificationService {
     public void notifySubscriber(SubscriberRow row, String message) {
         String callbackUrl = row.getCallbackUrl();
         String keyId = row.getKeyId();
-        String secret = row.getSecret();
+        String secret = subscriberStore.getSecretByKeyId(keyId);
         String payload = message != null ? message : "";
         log.info("Notifying subscriber {} at {} with message: {}", row.getName(), callbackUrl, payload);
 

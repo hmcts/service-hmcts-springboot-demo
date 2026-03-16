@@ -4,11 +4,11 @@
 FROM eclipse-temurin:25.0.2_10-jdk AS build
 WORKDIR /app
 COPY gradle /app/gradle
-COPY outbound-auth-hmac-demo/client /app/client
-WORKDIR /app/client
+COPY outbound-auth-hmac-demo/client /app/outbound-auth-hmac-demo/client
+WORKDIR /app/outbound-auth-hmac-demo/client
 RUN ./gradlew bootJar --no-daemon
 
 FROM eclipse-temurin:25.0.2_10-jre
-COPY --from=build /app/client/build/libs/*.jar app.jar
+COPY --from=build /app/outbound-auth-hmac-demo/client/build/libs/*.jar app.jar
 EXPOSE 8081
 ENTRYPOINT ["java", "-jar", "/app.jar"]

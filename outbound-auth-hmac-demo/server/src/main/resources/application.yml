@@ -8,3 +8,8 @@ spring:
 # Delay (ms) before sending callback so the client has time to receive the 202 and store the secret
 notify:
   callback-delay-ms: ${CALLBACK_DELAY_MS:500}
+
+azure:
+  keyvault:
+    url: ${AZURE_KEYVAULT_URL:https://your-vault.vault.azure.net/}
+    emulator: ${AZURE_KEYVAULT_EMULATOR:true}

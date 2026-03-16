@@ -1,17 +1,43 @@
 # Build context is repo root so gradle/ and outbound-auth-hmac-demo/ are available.
 # Run from repo root: docker compose -f outbound-auth-hmac-demo/docker/docker-compose.yml up --build
+# One-time setup – generate SSL certs for the Key Vault emulator:
+#   ./outbound-auth-hmac-demo/scripts/setup-emulator-certs.sh
+# Key Vault modes (AZURE_KEYVAULT_EMULATOR on the server service):
+#   true  (default) – jamesgoulddev/azure-keyvault-emulator running in Docker
+#   false           – real Azure Key Vault; update AZURE_KEYVAULT_URL accordingly
 
 services:
+  keyvault-emulator:
+    image: jamesgoulddev/azure-keyvault-emulator:latest
+    ports:
+      - "4997:4997"
+    volumes:
+      - ./certs:/certs
+    environment:
+      Persist: "false"
+    healthcheck: # workaround 3 - start up race condition : Connection refused: keyvault-emulator/172.27.0.2:4997 and Spring ApplicationContext fails to start
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/4997' 2>/dev/null && echo ok || exit 1"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
   server:
     build:
-      context: ../../..
+      context: ../..
       dockerfile: outbound-auth-hmac-demo/docker/Dockerfile.server
     ports:
       - "8080:8080"
+    environment:
+      AZURE_KEYVAULT_EMULATOR: "true"
+      AZURE_KEYVAULT_URL: https://keyvault-emulator:4997
+    depends_on:
+      keyvault-emulator:  # Docker won't start server until emulator passes healthcheck
+        condition: service_healthy
 
   client:
     build:
-      context: ../../..
+      context: ../..
       dockerfile: outbound-auth-hmac-demo/docker/Dockerfile.client
     ports:
       - "8081:8081"

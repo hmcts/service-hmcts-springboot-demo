@@ -1,0 +1,4 @@
+# Generated SSL certificates – never commit private keys
+certs/emulator.key
+certs/emulator.pfx
+certs/emulator.crt

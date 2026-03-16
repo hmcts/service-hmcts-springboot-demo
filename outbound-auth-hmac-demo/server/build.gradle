@@ -17,10 +17,13 @@ apply {
 
 dependencies {
   developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
+  implementation 'com.azure:azure-security-keyvault-secrets:4.9.1'
+  implementation 'com.azure:azure-identity:1.14.2'
 }
 
 openApiValidate {
-  inputSpec.set("src/main/resources/openapi/openapi-spec.yml")
+  inputSpec.set("src/main/resources/openapi-spec.yml")
 }
 
 tasks.named('check') {
