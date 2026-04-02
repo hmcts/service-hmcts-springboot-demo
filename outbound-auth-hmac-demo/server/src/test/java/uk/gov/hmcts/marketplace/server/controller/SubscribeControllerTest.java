@@ -1,15 +1,20 @@
 package uk.gov.hmcts.marketplace.server.controller;
 
+import com.azure.security.keyvault.secrets.SecretClient;
 import com.jayway.jsonpath.JsonPath;
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import uk.gov.hmcts.marketplace.server.service.NotificationService;
+
+import java.time.Duration;
 
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -19,10 +24,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest(classes = uk.gov.hmcts.marketplace.server.ServerApplication.class)
 @AutoConfigureMockMvc
+@TestPropertySource(properties = "notify.callback-delay-ms=0")
 class SubscribeControllerTest {
 
     @Autowired
     MockMvc mvc;
+
+    @MockitoBean
+    SecretClient secretClient;
 
     @MockitoBean
     NotificationService notificationService;
@@ -40,6 +49,8 @@ class SubscribeControllerTest {
 
         String responseBody = result.getResponse().getContentAsString();
         String keyId = JsonPath.parse(responseBody).read("$.keyId", String.class);
-        verify(notificationService).notifyClient(eq("http://localhost:8081/callback-notify"), eq("Alice"), eq(keyId));
+        Awaitility.await().atMost(Duration.ofSeconds(2))
+                .untilAsserted(() -> verify(notificationService)
+                        .notifyClient(eq("http://localhost:8081/callback-notify"), eq("Alice"), eq(keyId)));
     }
 }

@@ -11,6 +11,8 @@ import uk.gov.hmcts.marketplace.server.model.RotateSecretRequest;
 import uk.gov.hmcts.marketplace.server.model.SecretResponse;
 import uk.gov.hmcts.marketplace.server.service.SubscriberStore;
 
+import java.util.UUID;
+
 @Slf4j
 @RestController
 @RequestMapping("/api")
