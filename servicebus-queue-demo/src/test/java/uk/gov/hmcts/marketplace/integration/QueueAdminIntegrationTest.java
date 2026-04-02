@@ -39,8 +39,8 @@ public class QueueAdminIntegrationTest extends QueueIntegrationTestBase {
         CreateQueueOptions createQueueOptions = new CreateQueueOptions();
         createQueueOptions.setDeadLetteringOnMessageExpiration(true);
         createQueueOptions.setDefaultMessageTimeToLive(Duration.ofHours(1));
-        adminClient.createQueue("queue.new", createQueueOptions);
+        adminClient.createQueue("pcr.outbound", createQueueOptions);
 
-        adminClient.deleteQueue("queue.new");
+        adminClient.deleteQueue("pcr.outbound");
     }
 }

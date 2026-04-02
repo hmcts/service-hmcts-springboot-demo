@@ -88,13 +88,13 @@ public class QueueService {
 
     public void handleMessage(String queueName, ServiceBusReceivedMessageContext context) {
         ServiceBusReceivedMessage message = context.getMessage();
-        log.info("Processing {} messageId:{} deliveryCount:{}", queueName, message.getMessageId(), message.getDeliveryCount());
+        log.info("handleMessage - processing {} messageId:{} deliveryCount:{}", queueName, message.getMessageId(), message.getDeliveryCount());
         ampClientService.receiveMessage(queueName, String.valueOf(message.getBody()));
     }
 
     public void handleError(String queueName, ServiceBusErrorContext context) {
         // We need to properly handle the error ... leave it on the queue / send to DLQ
-        log.error("error processing subscription message - {}", context.getException().getMessage());
+        log.error("handleError - error processing subscription message - {}", context.getException().getMessage());
     }
 
     @SneakyThrows

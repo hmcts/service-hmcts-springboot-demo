@@ -1,5 +1,6 @@
 package uk.gov.hmcts.marketplace.integration;
 
+import com.azure.messaging.servicebus.administration.models.CreateQueueOptions;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,6 +30,8 @@ import static org.mockito.Mockito.verify;
 public class QueueIntegrationTest extends QueueIntegrationTestBase {
 
     @Autowired
+    ServiceBusTestService testService;
+    @Autowired
     QueueService queueService;
     @MockitoBean
     AmpClientService ampClientService;
@@ -56,7 +59,33 @@ public class QueueIntegrationTest extends QueueIntegrationTestBase {
     }
 
     @Test
+    void newq_process_message_should_retry_n_times_then_send_to_DLQ() {
+        String queueName = "notifications.inbound";
+        testService.dropQueueIfExists(queueName);
+        CreateQueueOptions createQueueOptions = new CreateQueueOptions();
+        createQueueOptions.setDeadLetteringOnMessageExpiration(false);
+        createQueueOptions.setDefaultMessageTimeToLive(Duration.ofHours(1));
+        createQueueOptions.setForwardDeadLetteredMessagesTo("");
+        createQueueOptions.setLockDuration(Duration.ofMinutes(1));
+        createQueueOptions.setMaxDeliveryCount(3);
+        adminClient.createQueue(queueName, createQueueOptions);
+        queueService.processMessages(queueName, 2000);
+        queueService.sendMessage(queueName, message);
+
+        log.info("getting messages ... 3 sends and then should fail to DLQ");
+        doThrow(HttpClientErrorException.class).when(ampClientService).receiveMessage(queueName, message);
+        queueService.processMessages(queueName, 500);
+        verify(ampClientService, times(3)).receiveMessage(queueName, message);
+
+        log.info("reprocessing messages from DLQ just once");
+        reset(ampClientService);
+        queueService.processDeadLetterMessages(queueName, 500);
+        verify(ampClientService).receiveMessage(queueName + "-DLQ", message);
+    }
+
+    @Test
     void process_message_should_retry_n_times_then_send_to_DLQ() {
+        String queueName = "queue.1";
         queueService.sendMessage(queueName, message);
 
         log.info("getting messages ... 3 sends and then should fail to DLQ");
