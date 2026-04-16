@@ -1,15 +1,19 @@
 # Azure azureite is a docker emulator that can be used to locally test Azure file storage
 
-# An example using TestContainers to spin up azureite docker container in integration tests can be found at
+# An example using TestContainers to spin up azurite docker container in integration tests can be found at
 https://github.com/hmcts/cp-case-document-knowledge-service
 
-Uses avast docker-compose plugin for gradle here
-https://github.com/hmcts/cp-case-document-knowledge-service/blob/main/build.gradle
+https://github.com/hmcts/cp-court-list-publishing-service
 
-With gradle docker compose config here
-https://github.com/hmcts/cp-case-document-knowledge-service/blob/main/gradle/docker.gradle
+# This demo provides a cut down simple implementation
 
-And docker compose here
-https://github.com/hmcts/cp-case-document-knowledge-service/blob/main/docker/docker-compose.integration.yml
+We focus on showing 7 common storage operations
+createIfNotExists()
+BlobClient.upload(BinaryData, overwrite)
+BlobClient.downloadContent().toBytes()
+BlobClient.exists()
+BlobClient.getProperties()
+BlobContainerClient.listBlobs()
+BlobClient.delete()
 
-( Note this project also uses artemis whic may be useful example )
+# We can also use the "az" cli to see whats happening in the azurite emulator
