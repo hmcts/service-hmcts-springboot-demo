@@ -9,4 +9,5 @@ bin/*
 .idea
 *.log
 *.jar
+!**/gradle/wrapper/gradle-wrapper.jar
 *.patch
