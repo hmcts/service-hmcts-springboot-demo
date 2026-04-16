@@ -22,13 +22,16 @@ jobs:
                   postgres-springboot4,
                   servicebus-retry-demo,
                   servicebus-queue-demo,
-                  servicebus-topic-demo ]
+                  servicebus-topic-demo,
+                  azure-azureite-storage ]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
 
       - name: Module tests
+        env:
+          AZURITE_ACCOUNT_KEY: ${{ vars.AZURITE_ACCOUNT_KEY }}
         run: |
           cd ${{ matrix.module }}
           pwd
