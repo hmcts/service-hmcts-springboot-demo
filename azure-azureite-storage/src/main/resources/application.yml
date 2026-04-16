@@ -1,0 +1,5 @@
+azure:
+  storage:
+    # UseDevelopmentStorage=true targets local Azurite on its default ports (blob: 10000)
+    # Override via AZURE_STORAGE_CONNECTION_STRING env var for a real Azure account
+    connection-string: ${AZURE_STORAGE_CONNECTION_STRING:UseDevelopmentStorage=true}
