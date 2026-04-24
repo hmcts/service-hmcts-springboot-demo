@@ -28,7 +28,7 @@ repositories {
 }
 
 ext {
-  lombokVersion = "1.18.44"
+  lombokVersion = "1.18.46"
   jupiterVersion = "6.0.3"
 }
 
