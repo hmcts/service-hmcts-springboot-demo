@@ -1,13 +1,11 @@
 package uk.gov.hmcts.marketplace.postgreslock.config;
 
-import org.junit.jupiter.api.extension.AfterAllCallback;
-import org.junit.jupiter.api.extension.ExtensionContext;
 import org.springframework.boot.test.util.TestPropertyValues;
 import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.testcontainers.containers.PostgreSQLContainer;
 
-public class TestContainersInitialise implements ApplicationContextInitializer<ConfigurableApplicationContext>, AfterAllCallback {
+public class TestContainersInitialise implements ApplicationContextInitializer<ConfigurableApplicationContext> {
 
     private static final PostgreSQLContainer postgreSQLContainer = new PostgreSQLContainer(
             "postgres")
@@ -27,12 +25,5 @@ public class TestContainersInitialise implements ApplicationContextInitializer<C
         ).applyTo(applicationContext.getEnvironment());
     }
 
-    @Override
-    public void afterAll(ExtensionContext context) throws Exception {
-        if (postgreSQLContainer == null) {
-            return;
-        }
-        postgreSQLContainer.close();
-    }
 }
 
