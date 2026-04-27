@@ -8,26 +8,15 @@ plugins {
 version = '1.0.0'
 group = 'uk.gov.hmcts.marketplace'
 
-java {
-  toolchain {
-    languageVersion.set(JavaLanguageVersion.of(21))
-  }
-}
-
-repositories {
-  mavenCentral()
-}
-
 apply {
   from("../gradle/java-core.gradle")
   from("../gradle/spring-core.gradle")
-}
-
-ext {
-  lombokVersion = "1.18.42"
 }
 
 dependencies {
   testRuntimeOnly "org.junit.platform:junit-platform-launcher"
 }
 
+springBoot {
+  buildInfo()
+}

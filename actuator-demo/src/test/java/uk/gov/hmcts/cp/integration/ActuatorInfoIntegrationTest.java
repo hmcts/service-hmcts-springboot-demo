@@ -5,7 +5,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -22,13 +21,20 @@ class ActuatorInfoIntegrationTest {
     private MockMvc mockMvc;
 
     @Test
-    void actuator_info_should_include_gorylenko_git_info() throws Exception {
+    void actuator_info_should_include_build_info() throws Exception {
         mockMvc.perform(get("/actuator/info"))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.build.name").value("actuator-demo"))
                 .andExpect(jsonPath("$.build.version").value("1.0.0"))
-                .andExpect(jsonPath("$.build.time").exists())
+                .andExpect(jsonPath("$.build.time").exists());
+    }
+
+    @Test
+    void actuator_info_should_include_gorylenko_git_info() throws Exception {
+        mockMvc.perform(get("/actuator/info"))
+                .andDo(print())
+                .andExpect(status().isOk())
                 .andExpect(jsonPath("$.git.branch").exists())
                 .andExpect(jsonPath("$.git.commit.id").exists())
                 .andExpect(jsonPath("$.git.commit.time").exists());
