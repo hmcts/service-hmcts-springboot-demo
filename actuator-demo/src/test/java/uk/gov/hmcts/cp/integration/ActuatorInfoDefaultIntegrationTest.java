@@ -15,18 +15,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
 @Slf4j
-class ActuatorIntegrationTest {
+class ActuatorInfoDefaultIntegrationTest {
 
     @Resource
     private MockMvc mockMvc;
 
     @Test
-    void actuator_health_should_have_correct_fields() throws Exception {
-        mockMvc.perform(get("/actuator/health"))
+    void actuator_info_should_display_version_from_environment() throws Exception {
+        mockMvc.perform(get("/actuator/info"))
                 .andDo(print())
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("UP"))
-                .andExpect(jsonPath("$.groups[0]").value("liveness"))
-                .andExpect(jsonPath("$.groups[1]").value("readiness"));
+                .andExpect(jsonPath("$.build.name").value("actuator-demo"))
+                .andExpect(jsonPath("$.build.version").value("ARTEFACT_VERSION not set"));
     }
 }
