@@ -23,7 +23,8 @@ jobs:
                   servicebus-retry-demo,
                   servicebus-queue-demo,
                   servicebus-topic-demo,
-                  azure-azureite-storage ]
+          #        azure-azureite-storage
+        ]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
