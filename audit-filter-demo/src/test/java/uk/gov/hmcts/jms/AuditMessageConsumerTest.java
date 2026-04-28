@@ -1,5 +1,6 @@
 package uk.gov.hmcts.jms;
 
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -12,16 +13,19 @@ import java.nio.charset.StandardCharsets;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @ExtendWith(MockitoExtension.class)
+@Slf4j
 class AuditMessageConsumerTest {
 
     @InjectMocks
     AuditMessageConsumer auditMessageConsumer;
 
     @Test
-    void audit_jms_message_should_siomply_make_log_message() {
+    void audit_jms_message_should_simply_make_log_message() {
         final ByteArrayOutputStream capturedStdOut = captureStdOut();
         auditMessageConsumer.on("msg");
-        assertThat(capturedStdOut.toString()).endsWith("Audit payload: msg\n");
+        String auditMessage = capturedStdOut.toString();
+        log.info("AuditMessage:{}", auditMessage);
+        assertThat(auditMessage).endsWith("Audit payload: msg\n");
     }
 
     private ByteArrayOutputStream captureStdOut() {
