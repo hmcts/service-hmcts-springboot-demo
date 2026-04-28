@@ -15,4 +15,13 @@ apply {
 
 dependencies {
   implementation "uk.gov.hmcts.cp:cp-springboot-audit-filter:1.0.1"
+
+  testImplementation "org.testcontainers:testcontainers:2.0.4"
+  testImplementation "org.testcontainers:testcontainers-junit-jupiter:2.0.4"
+  testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+}
+
+tasks.named('test') {
+  useJUnitPlatform()
+  include '**/*Test.class', '**/*IntegrationTest.class'
 }
