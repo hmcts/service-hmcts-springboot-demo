@@ -2,6 +2,18 @@ server:
   port: 8080
 
 spring:
-  artemis:
-    user: "artemis"
-    password: "artemis"
+  jms:
+    pub-sub-domain: true
+
+cp:
+  audit:
+    hosts:
+      - localhost
+    port: 61616
+    user: artemis
+    password: artemis
+
+audit:
+  http:
+    enabled: true
+    openapi-rest-spec: api-spec.yaml

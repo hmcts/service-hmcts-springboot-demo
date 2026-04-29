@@ -24,9 +24,9 @@ abstract class AuditFilterIntegrationTestBase {
         .withExposedPorts(ARTEMIS_PORT);
 
     @DynamicPropertySource
-    static void artemisProperties(DynamicPropertyRegistry registry) {
-        String brokerUrl = "tcp://" + artemis.getHost() + ":" + artemis.getMappedPort(ARTEMIS_PORT);
-        registry.add("spring.artemis.broker-url", () -> brokerUrl);
+    static void auditProperties(DynamicPropertyRegistry registry) {
+        registry.add("cp.audit.hosts[0]", artemis::getHost);
+        registry.add("cp.audit.port", () -> artemis.getMappedPort(ARTEMIS_PORT));
     }
 
     @LocalServerPort

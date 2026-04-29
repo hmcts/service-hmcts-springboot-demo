@@ -14,7 +14,8 @@ apply {
 }
 
 dependencies {
-  implementation "uk.gov.hmcts.cp:cp-springboot-audit-filter:1.0.1"
+  implementation "uk.gov.hmcts.cp:cp-audit-filter-springboot:1.0.5"
+  implementation "org.springframework.boot:spring-boot-starter-artemis"
 
   testImplementation "org.testcontainers:testcontainers:2.0.4"
   testImplementation "org.testcontainers:testcontainers-junit-jupiter:2.0.4"
