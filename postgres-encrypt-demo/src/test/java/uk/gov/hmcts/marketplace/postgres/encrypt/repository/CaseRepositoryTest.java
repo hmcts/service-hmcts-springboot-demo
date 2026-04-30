@@ -44,8 +44,8 @@ class CaseRepositoryTest {
         );
 
         assertThat(rawDbValue)
-            .as("defendant name must not be stored as plain text")
-            .isNotEqualTo(DEFENDANT);
+            .as("defendant name must be stored with stub encryption wrapper")
+            .isEqualTo("<ENCRYPT>" + DEFENDANT + "</ENCRYPT>");
     }
 
     @Test
