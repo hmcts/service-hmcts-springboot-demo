@@ -1,7 +1,10 @@
 package uk.gov.hmcts.integration;
 
-import org.springframework.boot.test.context.SpringBootTest;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.jms.core.JmsTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.GenericContainer;
@@ -9,11 +12,16 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+import java.util.ArrayList;
+import java.util.List;
+
 @Testcontainers
 abstract class AuditFilterIntegrationTestBase {
 
+    static final String AUDIT_QUEUE = "jms.topic.auditing.event";
     private static final int ARTEMIS_PORT = 61616;
+
+    protected final ObjectMapper objectMapper = new ObjectMapper();
 
     @Container
     @SuppressWarnings("resource")
@@ -31,4 +39,17 @@ abstract class AuditFilterIntegrationTestBase {
 
     @LocalServerPort
     protected int port;
+
+    @Autowired
+    protected JmsTemplate jmsTemplate;
+
+    protected List<JsonNode> drainAuditQueue() throws Exception {
+        jmsTemplate.setReceiveTimeout(3000);
+        final List<JsonNode> messages = new ArrayList<>();
+        String raw;
+        while ((raw = (String) jmsTemplate.receiveAndConvert(AUDIT_QUEUE)) != null) {
+            messages.add(objectMapper.readTree(raw));
+        }
+        return messages;
+    }
 }
