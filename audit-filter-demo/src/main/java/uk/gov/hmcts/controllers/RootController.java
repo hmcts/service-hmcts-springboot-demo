@@ -2,6 +2,7 @@ package uk.gov.hmcts.controllers;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -20,6 +21,14 @@ public class RootController {
     @PostMapping("/echo")
     public ResponseEntity<Map<String, Map<String, Object>>> echo(@RequestBody final Map<String, Object> body) {
         return ResponseEntity.ok(Map.of("received", body));
+    }
+
+    @PostMapping("/cases/{caseId}/documents")
+    public ResponseEntity<Map<String, Object>> addCaseDocument(
+            @PathVariable final String caseId,
+            @RequestParam final String caseType,
+            @RequestBody final Map<String, Object> body) {
+        return ResponseEntity.ok(Map.of("caseId", caseId, "caseType", caseType, "document", body));
     }
 
     @GetMapping("/error")

@@ -9,3 +9,17 @@ paths:
   /echo:
     post:
       summary: Echo endpoint
+  /cases/{caseId}/documents:
+    post:
+      summary: Add document to case — demonstrates path param, query param and body in audit
+      parameters:
+        - name: caseId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: caseType
+          in: query
+          required: true
+          schema:
+            type: string
