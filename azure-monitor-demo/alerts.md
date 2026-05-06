@@ -14,6 +14,14 @@ Guide for setting up an Action Group (email + SMS) and an Alert Rule that fires 
 
 ---
 
+## Getting to Azure Monitor
+
+From the Azure Portal home page, click the **Monitor** icon under Azure services (or hover to reveal the **View** link).
+
+![Navigate to Azure Monitor from the portal home page](alerts-images/alerts-monitor1.png)
+
+---
+
 ## Step 1 — Create an Action Group
 
 An Action Group defines *who gets notified* and *how*.
