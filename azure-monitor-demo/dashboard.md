@@ -105,7 +105,7 @@ The downloaded JSON defines each tile's position, size, KQL query, and chart typ
 
 ## hearing-results-document-subscription dashboard
 
-The file [`my-dashboard.json`](./my-dashboard.json) contains the full dashboard definition with 5 tiles across 3 rows, scoped to workspace `la-mdv-dev-int-ws` in resource group `rg-mdv-dev-int-01`.
+The file [`my-dashboard.json`](./dashboards/my-dashboard.json) contains the full dashboard definition with 5 tiles across 3 rows, scoped to workspace `la-mdv-dev-int-ws` in resource group `rg-mdv-dev-int-01`.
 
 ### Layout
 
