@@ -2,6 +2,8 @@
 
 Guide for setting up an Action Group (email + SMS) and an Alert Rule that fires when a specific error pattern appears in Log Analytics.
 
+> ⚠️ **Prototyping only** — the portal (clickops) steps below are intended to help you understand and prototype alert configuration. Production alerts are deployed via Terraform in [cp-amp-terraform-alerts](https://github.com/hmcts/cp-amp-terraform-alerts). Do not manually create or modify alerts in production environments.
+
 ---
 
 ## Prerequisites
