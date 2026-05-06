@@ -2,6 +2,8 @@
 
 Step-by-step guide for creating, viewing, editing and exporting an Azure Portal dashboard from KQL queries.
 
+> ⚠️ **Prototyping only** — the portal (clickops) steps below are intended to help you understand and prototype dashboard configuration. Production alerts and monitoring infrastructure are deployed via Terraform in [cp-amp-terraform-alerts](https://github.com/hmcts/cp-amp-terraform-alerts). Do not manually create or modify production dashboards outside of that process.
+
 ---
 
 ## How to create a dashboard tile from a KQL query

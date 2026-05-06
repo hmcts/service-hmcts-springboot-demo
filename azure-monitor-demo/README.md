@@ -2,6 +2,8 @@
 
 Guides for monitoring `hearing-results-document-subscription` using Azure Log Analytics.
 
+> ⚠️ **Prototyping only** — the portal (clickops) guides here are for learning and prototyping. Production alerts and monitoring infrastructure are deployed via Terraform in [cp-amp-terraform-alerts](https://github.com/hmcts/cp-amp-terraform-alerts).
+
 ---
 
 ## Contents
