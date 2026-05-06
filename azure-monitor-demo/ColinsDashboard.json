@@ -1,0 +1,284 @@
+{
+  "properties": {
+    "lenses": [
+      {
+        "order": 0,
+        "parts": [
+          {
+            "position": {
+              "x": 0,
+              "y": 0,
+              "colSpan": 6,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "resourceTypeMode",
+                  "isOptional": true
+                },
+                {
+                  "name": "ComponentId",
+                  "isOptional": true
+                },
+                {
+                  "name": "Scope",
+                  "value": {
+                    "resourceIds": [
+                      "/subscriptions/e6b5053b-4c38-4475-a835-a025aeb3d8c7/resourcegroups/rg-mdv-dev-int-01/providers/microsoft.operationalinsights/workspaces/la-mdv-dev-int-ws"
+                    ]
+                  },
+                  "isOptional": true
+                },
+                {
+                  "name": "PartId",
+                  "value": "14e935da-1521-49d9-beb5-ce417fc5ece0",
+                  "isOptional": true
+                },
+                {
+                  "name": "Version",
+                  "value": "2.0",
+                  "isOptional": true
+                },
+                {
+                  "name": "TimeRange",
+                  "isOptional": true
+                },
+                {
+                  "name": "DashboardId",
+                  "isOptional": true
+                },
+                {
+                  "name": "DraftRequestParameters",
+                  "isOptional": true
+                },
+                {
+                  "name": "Query",
+                  "value": "ContainerLogV2\n| where PodNamespace  == 'ns-dev-amp-01'\n| where TimeGenerated > ago(7d)\n| where ContainerName != 'istio-proxy'\n| where PodName contains 'hearing-results'\n| where LogMessage contains 'getDocument request'\n| project TimeGenerated, LogLevel, LogMessage\n| make-series ReceivedNotification = count() default=0\n    on TimeGenerated\n    from ago(7d) to now()\n    step 1d\n| render columnchart\n",
+                  "isOptional": true
+                },
+                {
+                  "name": "ControlType",
+                  "value": "FrameControlChart",
+                  "isOptional": true
+                },
+                {
+                  "name": "SpecificChart",
+                  "value": "StackedColumn",
+                  "isOptional": true
+                },
+                {
+                  "name": "PartTitle",
+                  "value": "Analytics",
+                  "isOptional": true
+                },
+                {
+                  "name": "PartSubTitle",
+                  "value": "la-mdv-dev-int-ws",
+                  "isOptional": true
+                },
+                {
+                  "name": "Dimensions",
+                  "value": {
+                    "xAxis": {
+                      "name": "TimeGenerated",
+                      "type": "datetime"
+                    },
+                    "yAxis": [
+                      {
+                        "name": "ReceivedNotification",
+                        "type": "real"
+                      }
+                    ],
+                    "splitBy": [],
+                    "aggregation": "Sum"
+                  },
+                  "isOptional": true
+                },
+                {
+                  "name": "LegendOptions",
+                  "value": {
+                    "isEnabled": true,
+                    "position": "Bottom"
+                  },
+                  "isOptional": true
+                },
+                {
+                  "name": "IsQueryContainTimeRange",
+                  "value": true,
+                  "isOptional": true
+                }
+              ],
+              "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart",
+              "settings": {},
+              "partHeader": {
+                "title": "Errors",
+                "subtitle": "By Day"
+              }
+            }
+          },
+          {
+            "position": {
+              "x": 6,
+              "y": 0,
+              "colSpan": 6,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "resourceTypeMode",
+                  "isOptional": true
+                },
+                {
+                  "name": "ComponentId",
+                  "isOptional": true
+                },
+                {
+                  "name": "Scope",
+                  "value": {
+                    "resourceIds": [
+                      "/subscriptions/e6b5053b-4c38-4475-a835-a025aeb3d8c7/resourcegroups/rg-mdv-dev-int-01/providers/microsoft.operationalinsights/workspaces/la-mdv-dev-int-ws"
+                    ]
+                  },
+                  "isOptional": true
+                },
+                {
+                  "name": "PartId",
+                  "value": "1b513585-0516-400c-a606-1aa468bd73f0",
+                  "isOptional": true
+                },
+                {
+                  "name": "Version",
+                  "value": "2.0",
+                  "isOptional": true
+                },
+                {
+                  "name": "TimeRange",
+                  "isOptional": true
+                },
+                {
+                  "name": "DashboardId",
+                  "isOptional": true
+                },
+                {
+                  "name": "DraftRequestParameters",
+                  "isOptional": true
+                },
+                {
+                  "name": "Query",
+                  "value": "ContainerLogV2\n| where PodNamespace  == 'ns-dev-amp-01'\n| where TimeGenerated > ago(28d)\n| where ContainerName != 'istio-proxy'\n| where PodName contains 'hearing-results'\n| where LogMessage contains 'Received notification request'\n| project TimeGenerated, LogLevel, LogMessage\n| make-series ReceivedNotification = count() default=0\n    on TimeGenerated\n    from ago(28d) to now()\n    step 1d\n| render timechart\n",
+                  "isOptional": true
+                },
+                {
+                  "name": "ControlType",
+                  "value": "FrameControlChart",
+                  "isOptional": true
+                },
+                {
+                  "name": "SpecificChart",
+                  "value": "Line",
+                  "isOptional": true
+                },
+                {
+                  "name": "PartTitle",
+                  "value": "Analytics",
+                  "isOptional": true
+                },
+                {
+                  "name": "PartSubTitle",
+                  "value": "la-mdv-dev-int-ws",
+                  "isOptional": true
+                },
+                {
+                  "name": "Dimensions",
+                  "value": {
+                    "xAxis": {
+                      "name": "TimeGenerated",
+                      "type": "datetime"
+                    },
+                    "yAxis": [
+                      {
+                        "name": "ReceivedNotification",
+                        "type": "real"
+                      }
+                    ],
+                    "splitBy": [],
+                    "aggregation": "Sum"
+                  },
+                  "isOptional": true
+                },
+                {
+                  "name": "LegendOptions",
+                  "value": {
+                    "isEnabled": true,
+                    "position": "Bottom"
+                  },
+                  "isOptional": true
+                },
+                {
+                  "name": "IsQueryContainTimeRange",
+                  "value": true,
+                  "isOptional": true
+                }
+              ],
+              "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart",
+              "settings": {
+                "content": {
+                  "Query": "ContainerLogV2\n| where PodNamespace  == 'ns-dev-amp-01'\n| where TimeGenerated > ago(28d)\n| where ContainerName != 'istio-proxy'\n| where PodName contains 'hearing-results'\n| where LogMessage contains 'Received notification request'\n| project TimeGenerated, LogLevel, LogMessage\n| make-series ReceivedNotification = count() default=0\n    on TimeGenerated\n    from ago(28d) to now()\n    step 1d\n| render timechart\n\n",
+                  "ControlType": "FrameControlChart"
+                }
+              },
+              "partHeader": {
+                "title": "Notifications",
+                "subtitle": ""
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "metadata": {
+      "model": {
+        "timeRange": {
+          "value": {
+            "relative": {
+              "duration": 24,
+              "timeUnit": 1
+            }
+          },
+          "type": "MsPortalFx.Composition.Configuration.ValueTypes.TimeRange"
+        },
+        "filterLocale": {
+          "value": "en-us"
+        },
+        "filters": {
+          "value": {
+            "MsPortalFx_TimeRange": {
+              "model": {
+                "format": "utc",
+                "granularity": "auto",
+                "relative": "30d"
+              },
+              "displayCache": {
+                "name": "UTC Time",
+                "value": "Past 30 days"
+              },
+              "filteredPartIds": [
+                "StartboardPart-LogsDashboardPart-d8b0168c-7789-49bc-b62c-d65fbc26829b",
+                "StartboardPart-LogsDashboardPart-d8b0168c-7789-49bc-b62c-d65fbc2682ba"
+              ]
+            }
+          }
+        }
+      }
+    }
+  },
+  "name": "ColinsDashboard",
+  "type": "Microsoft.Portal/dashboards",
+  "location": "INSERT LOCATION",
+  "tags": {
+    "hidden-title": "ColinsDashboard"
+  },
+  "apiVersion": "2022-12-01-preview"
+}
