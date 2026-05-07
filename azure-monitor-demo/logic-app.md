@@ -178,3 +178,56 @@ Azure Monitor Alert Rule
         ▼
   Microsoft Teams group chat
 ```
+
+---
+
+## ⚠️ Limitations for production
+
+### The personal-account problem
+
+The **Microsoft Teams connector** in Logic Apps authenticates using **OAuth
+delegated permissions** — it signs in as the user who configured it (in this
+case a personal Azure account). This is fine for prototyping but has two
+critical problems in production:
+
+| Problem | Impact |
+|---|---|
+| **Tied to an individual** | If that person leaves or their password/MFA changes, the Logic App silently stops posting to Teams |
+| **Not infrastructure-as-code** | Terraform has no way to provision a personal OAuth connection — it cannot be version-controlled or reproduced reliably |
+
+### Production options
+
+#### Option A — Service account (simplest step up)
+
+Create a dedicated shared account (e.g. `amp-alerts@hmcts.gov.uk`), add it to
+the Teams channel/chat, and authenticate the Logic App Teams connector as that
+account. Credentials can be stored in Key Vault and referenced by Terraform. The
+connection is no longer tied to an individual, though it is still a user account
+with its own lifecycle management.
+
+#### Option B — Managed Identity + Microsoft Graph API (recommended)
+
+Assign the Logic App a **system-assigned Managed Identity** and grant it
+permission to post via the **Microsoft Graph API**
+(`POST /chats/{id}/messages` or `/teams/{id}/channels/{id}/messages`).
+No user account required — purely service-to-service authentication using Azure
+RBAC.
+
+The requirement: Graph API **application permissions** for posting to Teams
+require **admin consent** from the HMCTS tenant. Raise a request with IT/an
+Entra admin. Once granted, the whole setup is fully Terraform-deployable with no
+personal credentials anywhere.
+
+#### Option C — Email only (pragmatic for most cases)
+
+For production on-call alerting, email (via an Action Group notification) is
+simpler, more reliable, and requires no Teams permissions at all. Route alerts
+to a team distribution list. Teams visibility can come from a separate bot or
+integration that HMCTS IT manages centrally.
+
+### What HMCTS production likely uses
+
+The [`cp-amp-terraform-alerts`](https://github.com/hmcts/cp-amp-terraform-alerts)
+repo routes to **email, PagerDuty, or OpsGenie** rather than Teams directly.
+These are infrastructure-grade alert channels that are independent of any
+individual's account or Microsoft licence tier.
