@@ -81,13 +81,73 @@ by one of the following:
 2. **Try from Power Automate directly** — rather than using the Teams Workflows panel, create the flow in Power Automate:
    - Go to [make.powerautomate.com](https://make.powerautomate.com)
    - **+ Create → Automated cloud flow**
-   - Trigger: **When a HTTP request is received**
+   - Search for trigger: **When a HTTP request is received**
    - Action: **Post message in a chat or channel** (Teams connector)
    - Copy the generated webhook URL and use it in the Azure Action Group
 
+   > ⚠️ **"When a HTTP request is received" is a Premium connector** — it only appears if your account has a Power Automate Premium licence. On HMCTS accounts with a standard M365 licence it will not appear in the trigger list (you will only see third-party connectors like Loopio and TeamWherx). This confirms the licence block.
+
 3. **Raise with IT / ask for admin consent** — if the issue is tenant policy, an admin needs to grant consent for Power Automate connections at [entra.microsoft.com](https://entra.microsoft.com) → Enterprise applications → Power Automate.
 
-4. **Alternative — Logic App** — bypasses the Teams/Power Automate licensing issue entirely. See [alerts.md](./alerts.md) Option B for the Logic App approach which posts to Teams using the Microsoft Teams connector in Azure.
+4. **Recommended alternative — Azure Logic App** — bypasses the Teams/Power Automate licensing issue entirely as it runs inside your Azure subscription with no Power Automate licence required. See the [Logic App → Teams guide](#logic-app--teams-recommended) below.
+
+---
+
+---
+
+## Logic App → Teams (recommended)
+
+An Azure Logic App runs entirely within your Azure subscription and has its own
+HTTP trigger — no Power Automate licence required. This is the practical solution
+for HMCTS accounts.
+
+### Step 1 — Create a Logic App
+
+1. **Azure Portal → Create a resource → Logic App**
+2. Choose **Consumption** plan (pay per execution, cheapest for low-volume alerts)
+3. Give it a name e.g. `la-amp-teams-alert`, same resource group as your other monitor resources
+4. Click **Review + create → Create**
+
+### Step 2 — Add the HTTP trigger
+
+1. Open the Logic App → **Logic app designer**
+2. Click **Add a trigger** → search for `HTTP`
+3. Select **When a HTTP request is received**
+4. Leave the schema blank for now — Azure Monitor will populate it on first fire
+5. **Save** — a webhook URL is generated at the top of the trigger card. **Copy this URL.**
+
+### Step 3 — Add a Teams action
+
+1. Click **+ New step** → search for `Teams`
+2. Select **Microsoft Teams → Post message in a chat or channel**
+3. Sign in with your HMCTS account when prompted
+4. Set:
+
+   | Field | Value |
+   |---|---|
+   | Post in | Channel |
+   | Team | AMP |
+   | Channel | AMP Alerts |
+   | Message | `🚨 Alert fired: @{triggerBody()?['data']?['essentials']?['alertRule']}` |
+
+5. **Save** the Logic App
+
+### Step 4 — Wire the URL into the Action Group
+
+1. Open your Action Group (`ColinsAG`) → **Edit**
+2. Go to the **Actions** tab → **+ Add action**
+
+   | Field | Value |
+   |---|---|
+   | Action type | Webhook |
+   | Name | `TeamsLogicApp` |
+   | URI | *(paste the Logic App HTTP trigger URL)* |
+   | Enable common alert schema | Yes |
+
+3. **Save** the Action Group
+
+When the alert next fires, Azure Monitor POSTs to the Logic App URL → the Logic
+App posts a message into the **AMP Alerts** Teams channel.
 
 ---
 
