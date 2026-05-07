@@ -15,6 +15,14 @@ Monitor Action Group).
 > no Power Automate licence required. See [teams-webhook.md](./teams-webhook.md)
 > for full background.
 
+> ℹ️ **Why post to a Group Chat rather than a Channel?**  
+> Teams surfaces **chat messages with a notification badge** that is hard to
+> miss. Channel messages, by contrast, are easy to overlook — the Channels tab
+> shows no unread indicator unless you have explicitly followed the channel.
+> For alert visibility, a group chat (e.g. `AMP Tech`) is more reliable day-to-day.
+>
+> ![Teams Chats tab selected, showing AMP Tech chat with unread dot](logic-app/teams-channels.png)
+
 ---
 
 ## Step 1 — Create the Logic App
