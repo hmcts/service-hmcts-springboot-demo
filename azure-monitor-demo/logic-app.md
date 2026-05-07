@@ -234,6 +234,13 @@ in your Action Group — no Logic App, no Power Automate licence, no personal
 account required. The alert email appears directly in the channel and is fully
 Terraform-deployable (just an email address in the Action Group definition).
 
+![Teams Get email address dialog showing send permission settings](alerts-images/img_4.png)
+
+When the dialog opens, expand **Advanced settings** and either:
+
+- Select **"Anyone can send emails to this address"** (simplest — works immediately), or
+- Select **"Only email sent from these domains"** and add `microsoft.com` — Azure Monitor alert emails are sent from `azure-noreply@microsoft.com`, so this locks it down to Microsoft only without blocking the alerts.
+
 #### Option D — Email only (pragmatic for most cases)
 
 For production on-call alerting, email (via an Action Group notification) is
