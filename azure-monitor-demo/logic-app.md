@@ -15,6 +15,14 @@ Monitor Action Group).
 > no Power Automate licence required. See [teams-webhook.md](./teams-webhook.md)
 > for full background.
 
+> ℹ️ **Why post to a Group Chat rather than a Channel?**  
+> Teams surfaces **chat messages with a notification badge** that is hard to
+> miss. Channel messages, by contrast, are easy to overlook — the Channels tab
+> shows no unread indicator unless you have explicitly followed the channel.
+> For alert visibility, a group chat (e.g. `AMP Tech`) is more reliable day-to-day.
+>
+> ![Teams Chats tab selected, showing AMP Tech chat with unread dot](logic-app/teams-channels.png)
+
 ---
 
 ## Step 1 — Create the Logic App
@@ -218,7 +226,15 @@ require **admin consent** from the HMCTS tenant. Raise a request with IT/an
 Entra admin. Once granted, the whole setup is fully Terraform-deployable with no
 personal credentials anywhere.
 
-#### Option C — Email only (pragmatic for most cases)
+#### Option C — Email to a Teams channel (recommended simple option)
+
+Every Teams channel has a dedicated **email address** (open the channel →
+**···** → **Get email address**). Add that address as an **Email** notification
+in your Action Group — no Logic App, no Power Automate licence, no personal
+account required. The alert email appears directly in the channel and is fully
+Terraform-deployable (just an email address in the Action Group definition).
+
+#### Option D — Email only (pragmatic for most cases)
 
 For production on-call alerting, email (via an Action Group notification) is
 simpler, more reliable, and requires no Teams permissions at all. Route alerts
