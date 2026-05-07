@@ -12,7 +12,7 @@ Step-by-step guide for creating, viewing, editing and exporting an Azure Portal 
 
 Navigate to your **Log Analytics Workspace → Logs** and write your KQL query. Click **Run** to see results in the table below.
 
-![Step 1 — Run a KQL query in Log Analytics](images/QueryErrors1.png)
+![Step 1 — Run a KQL query in Log Analytics](dashboard-images/QueryErrors1.png)
 
 ---
 
@@ -20,7 +20,7 @@ Navigate to your **Log Analytics Workspace → Logs** and write your KQL query. 
 
 Append a `render` statement to your query (e.g. `| render columnchart`) and click **Run** again. Switch to the **Chart** tab to see the visualisation.
 
-![Step 2 — Add render columnchart to produce a chart](images/QueryErrorChart2.png)
+![Step 2 — Add render columnchart to produce a chart](dashboard-images/QueryErrorChart2.png)
 
 > See [queries.md](./queries.md) for all available chart types.
 
@@ -30,7 +30,7 @@ Append a `render` statement to your query (e.g. `| render columnchart`) and clic
 
 Click **Save → Pin to Azure dashboard**.
 
-![Step 3 — Save → Pin to Azure dashboard](images/QueryPinToDashboard3.png)
+![Step 3 — Save → Pin to Azure dashboard](dashboard-images/QueryPinToDashboard3.png)
 
 ---
 
@@ -41,7 +41,7 @@ In the **Pin to dashboard** dialog you can either:
 - **Existing tab** — select an existing dashboard from the dropdown
 - **Create new tab** — give it a name (e.g. `ColinsDashboard`), choose Private or Shared, then click **Create and pin**
 
-![Step 4 — Pin to dashboard dialog, Create new tab](images/PinToDashboard4.png)
+![Step 4 — Pin to dashboard dialog, Create new tab](dashboard-images/PinToDashboard4.png)
 
 > Choose **Private** if the dashboard is just for you. Choose **Shared** to make it visible to others in the subscription.
 
@@ -51,7 +51,7 @@ In the **Pin to dashboard** dialog you can either:
 
 Click **Dashboard** in the left-hand Azure Portal navigation (or hover over the grid icon to see the tooltip).
 
-![Step 5 — Dashboard link in the Azure Portal left nav](images/HomeDashboardLink5.png)
+![Step 5 — Dashboard link in the Azure Portal left nav](dashboard-images/HomeDashboardLink5.png)
 
 ---
 
@@ -59,7 +59,7 @@ Click **Dashboard** in the left-hand Azure Portal navigation (or hover over the 
 
 Click the dashboard name at the top left to open the dropdown — all your private and shared dashboards are listed here. Select yours.
 
-![Step 6 — Dashboard name dropdown showing available dashboards](images/DashboardList6.png)
+![Step 6 — Dashboard name dropdown showing available dashboards](dashboard-images/DashboardList6.png)
 
 ---
 
@@ -67,7 +67,7 @@ Click the dashboard name at the top left to open the dropdown — all your priva
 
 Your pinned chart tile appears on the dashboard. The toolbar gives you options to **Create**, **Upload**, **Refresh**, **Edit**, **Share** and **Export**.
 
-![Step 7 — ColinsDashboard showing a pinned chart tile](images/ColinsDashboard7.png)
+![Step 7 — ColinsDashboard showing a pinned chart tile](dashboard-images/ColinsDashboard7.png)
 
 ---
 
@@ -75,7 +75,7 @@ Your pinned chart tile appears on the dashboard. The toolbar gives you options t
 
 Click **Edit** in the toolbar to enter edit mode. You can drag tiles to reposition them, resize them by dragging the corners, and delete unwanted tiles. Click **Save** when done.
 
-![Step 8 — Edit mode showing tiles that can be moved and resized](images/EditDashboard8.png)
+![Step 8 — Edit mode showing tiles that can be moved and resized](dashboard-images/EditDashboard8.png)
 
 ---
 
@@ -87,13 +87,13 @@ Click **Edit** in the toolbar to enter edit mode. You can drag tiles to repositi
 2. Azure downloads a JSON file containing all tile definitions and queries.
 3. Commit this file to source control so the dashboard can be recreated by anyone on the team.
 
-![Export — Export → Download to get the dashboard JSON](images/DashboardExport9.png)
+![Export — Export → Download to get the dashboard JSON](dashboard-images/DashboardExport9.png)
 
 ### The dashboard JSON
 
 The downloaded JSON defines each tile's position, size, KQL query, and chart type. You can edit it directly in VS Code to change queries or add new tiles before re-importing.
 
-![Dashboard JSON structure in VS Code](images/DashboardJson10.png)
+![Dashboard JSON structure in VS Code](dashboard-images/DashboardJson10.png)
 
 ### Import — restore or share the dashboard
 
