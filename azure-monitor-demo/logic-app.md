@@ -241,6 +241,14 @@ When the dialog opens, expand **Advanced settings** and either:
 - Select **"Anyone can send emails to this address"** (simplest — works immediately), or
 - Select **"Only email sent from these domains"** and add `microsoft.com` — Azure Monitor alert emails are sent from `azure-noreply@microsoft.com`, so this locks it down to Microsoft only without blocking the alerts.
 
+> ⚠️ **Notification limitation** — even with channel notifications set to
+> "Show in activity and banner", email items delivered to a Teams channel are
+> treated differently from native Teams messages. They land in a separate mail
+> sub-feed inside the channel and **do not reliably trigger banner or badge
+> notifications**, even when that setting is enabled. You have to actively click
+> into the Channels tab to notice them. This makes email-to-channel unsuitable
+> for urgent alerts where immediate visibility matters.
+
 #### Option D — Email only (pragmatic for most cases)
 
 For production on-call alerting, email (via an Action Group notification) is
