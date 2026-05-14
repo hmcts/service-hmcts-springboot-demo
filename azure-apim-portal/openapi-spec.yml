@@ -1,0 +1,903 @@
+openapi: 3.1.0
+
+info:
+  title: API for Crime Hearing Results Document Subscription
+  description: Hearing Results Document Subscription specification
+  version: 1.0.0
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  contact:
+    name: HMCTS API Marketplace
+    email: no-reply@hmcts.com
+
+
+servers:
+  - url: https://api.example.com
+
+security:
+  - bearerAuth: []
+    subscriptionKey: []
+
+tags:
+  - name: Subscription
+  - name: Notification
+  - name: Internal
+
+paths:
+
+  /event-types:
+    get:
+      summary: Get list of valid event types for subscription service
+      description: Returns list of valid event types for subscription service
+      operationId: GetEventTypes
+      tags:
+        - Subscription
+      responses:
+        '200':
+          description: Event types
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventTypeResponse'
+              examples:
+                Event-Types Example:
+                  $ref: '#/components/examples/EventTypesResponse'
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+
+        '401':
+          description: Unauthorized - missing or invalid authentication credentials
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+
+        '403':
+          description: Forbidden - valid subscription key required but not subscribed to this API
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+
+
+  /client-subscriptions:
+    post:
+      summary: Create a new client subscription
+      description: Creates a new client subscription with the specified callback URL. Events will be sent to the provided callback URL via callback.
+      operationId: createClientSubscription
+      tags:
+        - Subscription
+      parameters:
+        - $ref: '#/components/parameters/XCorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientSubscriptionRequest'
+            examples:
+              createSubscription:
+                $ref: '#/components/examples/createSubscriptionRequest'
+      responses:
+        '201':
+          description: Subscription created successfully
+          content:
+            application/json:
+              examples:
+                createSubscription:
+                  $ref: '#/components/examples/createSubscriptionResponse'
+              schema:
+                $ref: '#/components/schemas/ClientSubscription'
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+
+        '400':
+          description: Invalid request payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                createSubscriptionError:
+                  $ref: '#/components/examples/createSubscriptionError'
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+
+        '401':
+          description: Unauthorized - missing or invalid authentication credentials
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+
+        '403':
+          description: Forbidden - valid subscription key required but not subscribed to this API
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+      callbacks:
+        onEvent:
+          '{$request.body#/notificationEndpoint/callbackUrl}':
+            post:
+              description: Event notification sent to the subscribed callback URL
+              parameters:
+                - $ref: '#/components/parameters/XCorrelationId'
+                - name: X-Key-Id
+                  in: header
+                  required: true
+                  description: Identifier of the key used to sign this callback. Matches the keyId issued when the subscription was created.
+                  schema:
+                    type: string
+                    example: "kid-v1-b41a48b7-a2a1-45f1-b562-1358f141ddb2"
+                - name: X-Signature
+                  in: header
+                  required: true
+                  description: HMAC-SHA256 signature of the callback request using the subscription's shared secret. The secret is returned once at subscription creation.
+                  schema:
+                    type: string
+                    example: "base64-encoded-signature"
+              requestBody:
+                description: Event payload containing defendant and case information
+                content:
+                  application/json:
+                    schema:
+                      $ref: '#/components/schemas/EventNotificationPayload'
+              responses:
+                '202':
+                  description: |
+                    Your server implementation should return this HTTP status code
+                    if the event was received successfully
+                  headers:
+                    X-Correlation-Id:
+                      $ref: '#/components/headers/XCorrelationId'
+                '400':
+                  description: Bad request - the event payload was invalid
+
+
+  /client-subscriptions/{clientSubscriptionId}:
+    get:
+      summary: Retrieve a client subscription by ID
+      description: Returns the subscription matching the given clientSubscriptionId.
+      operationId: getClientSubscription
+      tags:
+        - Subscription
+      parameters:
+        - name: clientSubscriptionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "aa12f3dd-4cc1-4da7-b9ea-552fa3b9bc44"
+        - $ref: '#/components/parameters/XCorrelationId'
+      responses:
+        '200':
+          description: Subscription object
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+          content:
+            application/json:
+              examples:
+                getSubscriptionResponse:
+                  $ref: '#/components/examples/getSubscriptionResponse'
+              schema:
+                $ref: '#/components/schemas/ClientSubscription'
+
+        '404':
+          description: Subscription not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                getSubscriptionError:
+                  $ref: '#/components/examples/getSubscriptionError'
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+
+        '401':
+          description: Unauthorized - missing or invalid authentication credentials
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+
+        '403':
+          description: Forbidden - valid subscription key required but not subscribed to this API
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+
+
+    put:
+      summary: Strict update of a client subscription
+      description: Caller must supply *all* updatable fields.
+      operationId: updateClientSubscription
+      tags:
+        - Subscription
+      parameters:
+        - name: clientSubscriptionId
+          in: path
+          required: true
+          example: "aa12f3dd-4cc1-4da7-b9ea-552fa3b9bc44"
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/XCorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            examples:
+              updateSubscription:
+                $ref: '#/components/examples/updateSubscription'
+            schema:
+              $ref: '#/components/schemas/ClientSubscriptionRequest'
+      responses:
+        '200':
+          description: Subscription updated
+          content:
+            application/json:
+              examples:
+                updatedSubscriptionResponse:
+                  $ref: '#/components/examples/updatedSubscriptionResponse'
+              schema:
+                $ref: '#/components/schemas/ClientSubscription'
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+
+        '400':
+          description: Invalid request
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+
+        '404':
+          description: Subscription not found
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+
+        '401':
+          description: Unauthorized - missing or invalid authentication credentials
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+
+        '403':
+          description: Forbidden - valid subscription key required but not subscribed to this API
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+
+
+    delete:
+      summary: Delete a subscription by ID
+      description: Deletes the subscription identified by clientSubscriptionId.
+      operationId: deleteClientSubscription
+      tags:
+        - Subscription
+      parameters:
+        - name: clientSubscriptionId
+          in: path
+          required: true
+          example: "aa12f3dd-4cc1-4da7-b9ea-552fa3b9bc44"
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/XCorrelationId'
+      responses:
+        '204':
+          description: Deleted successfully
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+
+        '404':
+          description: Subscription not found
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+
+        '401':
+          description: Unauthorized - missing or invalid authentication credentials
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+
+        '403':
+          description: Forbidden - valid subscription key required but not subscribed to this API
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+
+  /notifications:
+    post:
+      summary: Create a client notification.
+      description: Creates a client notification for given material id and event type
+      operationId: createNotification
+      tags:
+        - Internal
+      parameters:
+        - $ref: '#/components/parameters/XCorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventPayload'
+            examples:
+              PCR:
+                $ref: '#/components/examples/PCR'
+              NowsCustodialSentence:
+                $ref: '#/components/examples/NowsCustodialSentence'
+
+
+      responses:
+        '202':
+          description: accepted
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+
+        '401':
+          description: Unauthorized - missing or invalid authentication credentials
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+
+        '403':
+          description: Forbidden - valid subscription key required but not subscribed to this API
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+
+  /client-subscriptions/{clientSubscriptionId}/secret/rotate:
+    post:
+      summary: Rotate the HMAC signing secret for a subscription
+      description: Issues a new HMAC secret for the specified subscription. The new secret is returned once and cannot be retrieved again.
+      operationId: rotateClientSubscriptionSecret
+      tags:
+        - Subscription
+      parameters:
+        - name: clientSubscriptionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "aa12f3dd-4cc1-4da7-b9ea-552fa3b9bc44"
+        - $ref: '#/components/parameters/XCorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RotateSecretRequest'
+            examples:
+              rotateSecret:
+                $ref: '#/components/examples/rotateSecretRequest'
+      responses:
+        '200':
+          description: Secret rotated successfully. The new secret is returned once and cannot be retrieved again.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HmacCredentials'
+              examples:
+                rotateSecretResponse:
+                  $ref: '#/components/examples/rotateSecretResponse'
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+
+        '400':
+          description: Invalid request — missing or malformed keyId
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+
+        '401':
+          description: Unauthorized - missing or invalid authentication credentials
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+
+        '403':
+          description: Forbidden — the subscription does not belong to the calling client
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+
+        '404':
+          description: Not found — the keyId does not match any known key for this subscription
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+
+  /client-subscriptions/{clientSubscriptionId}/documents/{documentId}:
+    get:
+      summary: Retrieve PDF for the specified document id
+      description: Returns the PDF previously published for the given documentId.
+      operationId: getDocument
+      tags:
+        - Notification
+      parameters:
+        - name: clientSubscriptionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Subscriber's client subscription identifier
+        - name: documentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Public document identifier assigned to the subscriber
+        - $ref: '#/components/parameters/XCorrelationId'
+      responses:
+        '200':
+          description: PDF document (binary)
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+        '404':
+          description: Document not found or the client subscription is missing/inactive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+        '401':
+          description: Unauthorized - missing or invalid authentication credentials
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+
+        '403':
+          description: Forbidden - valid subscription key required but not subscribed to this API
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    subscriptionKey:
+      type: apiKey
+      in: header
+      name: Ocp-Apim-Subscription-Key
+      description: Subscription key for API access
+
+  headers:
+    XCorrelationId:
+      description: Correlation identifier for this request/response, used for end-to-end tracing.
+      schema:
+        type: string
+        format: uuid
+        example: "bf931a90-3e3f-4e8e-a8e4-a4ca9ac07830"
+
+  parameters:
+    XCorrelationId:
+      name: X-Correlation-Id
+      in: header
+      required: false
+      description: Optional correlation identifier for end-to-end tracing.
+      schema:
+        type: string
+        format: uuid
+        example: "d679fd61-061f-4440-9623-36280f0807b7"
+
+  schemas:
+    EventType:
+      type: string
+      description: |
+        Possible values:
+          - PRISON_COURT_REGISTER_GENERATED
+          - WEE_Layout5
+          - NEE_DetentionOnRecommendationForDeportation
+          - OEE_MedicalRemandAdditionalDetails
+          - WEE_RemandAfterBailAppealByProsecutor
+          - WEE_CustodialSentence
+          - WEE_CustodialSentenceWitness
+          - WEE_CommittalToCrownCourtForConsiderationOfTheQuestionOfBailOnAChargeOfMurder
+          - WEE_CommittalToCrownCourtForSentence
+          - WEE_SendingToCrownCourtForTrial
+          - OEE_BailAppealEndOfCustody
+          - WEE_CommitmentPendingTransferToServiceCustody
+          - WEE_NonPaymentOfMoneyOwedCivilDebt
+          - WEE_CustodyWarrantOnDischargeOfExtraditionPendingAppeal
+          - WEE_CustodyWarrantOnDischargeOfExtraditionPendingAppealPart2
+          - WEE_CustodyWarrantOnExtradition
+          - WEE_CustodyWarrantOnExtraditionCategory2Territory
+          - WEE_CustodyWarrantOnExtraditionWithConsent
+          - WEE_CustodyWarrantOnExtraditionWithBailDirection
+          - WEE_CustodyWarrantOnExtraditionWithBailDirectionWithConsent
+          - WEE_CustodyWarrantOnExtraditionWithBailDirectionCategory2Territory
+          - WEE_CustodyWarrantSendingToSecretaryOfStateCategory2Territory
+          - WEE_CustodyWarrantSendingToSecretaryOfStateOnConsentCategory2Territory
+          - WEE_CustodyWarrantWithBailDirectionOnDischargeOfExtraditionPendingAppeal
+          - WEE_CustodyWarrantWithBailDirectionOnDischargeOfExtraditionPendingAppealPart2
+          - WEE_CustodyWarrantWithBailDirectionSendingToSecretaryOfStateCategory2Territory
+          - WEE_CustodyWarrantWithBailDirectionSendingToSecretaryOfStateOnConsentCategory2Territory
+          - WEE_ExtraditionRemandAfterBailAppealByProsecutor
+          - WEE_ExtraditionSupplementToCustodyWarrant
+          - OBE_TerminationOfFootballBanning
+          - OBE_ChangeOfFootballBanning
+          - NEE_FootballBanning
+          - WEE_Remand
+          - WXE_RemandWarrantYouthDetentionAccommodation
+          - OXE_DetentionAndTraining
+          - WEE_InjunctionDetention
+          - OPE_SupervisionOnBreachOfDetentionAndTraining
+          - WEE_CommittalToCrownCourtAuthorityToHoldInYouthDetentionAccommodation
+          - WEE_Detention
+          - WEE_DetentionInYouthDetentionAccommodationBreach
+          - WEE_SendingToCrownCourtAuthorityToHoldInYouthDetentionAccommodation
+
+    NotificationEndpoint:
+      type: object
+      required:
+        - callbackUrl
+      properties:
+        callbackUrl:
+          type: string
+          pattern: '^https://.*$'
+          description: The location where event data will be sent. Event notifications will be POSTed to this URL with EventNotificationPayload in the request body.
+
+    EventTypeResponse:
+      type: object
+      properties:
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/EventTypePayload'
+
+    EventTypePayload:
+      type: object
+      properties:
+        eventName:
+          type: string
+        displayName:
+          type: string
+        category:
+          type: string
+
+    ClientSubscriptionRequest:
+      type: object
+      required:
+        - notificationEndpoint
+        - eventTypes
+      properties:
+        notificationEndpoint:
+          $ref: '#/components/schemas/NotificationEndpoint'
+        eventTypes:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/EventType'
+
+    ClientSubscription:
+      type: object
+      required:
+        - clientSubscriptionId
+        - notificationEndpoint
+        - eventTypes
+        - createdAt
+      properties:
+        clientSubscriptionId:
+          type: string
+          format: uuid
+        notificationEndpoint:
+          $ref: '#/components/schemas/NotificationEndpoint'
+        eventTypes:
+          type: array
+          items:
+            $ref: '#/components/schemas/EventType'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        hmac:
+          $ref: '#/components/schemas/HmacCredentials'
+
+    HmacCredentials:
+      type: object
+      description: HMAC credentials issued at subscription creation for signing outbound callbacks.
+      properties:
+        keyId:
+          type: string
+          description: Identifier for the shared secret used to sign outbound callbacks for this subscription
+          example: "kid-v1-b41a48b7-a2a1-45f1-b562-1358f141ddb2"
+        secret:
+          type: string
+          writeOnly: true
+          description:
+            Base64-encoded shared secret used to sign outbound callbacks for this subscription.
+            Returned in the create subscription response. Not returned by subsequent GET operations.
+          example: "example-base64-encoded-secret"
+
+    RotateSecretRequest:
+      type: object
+      required:
+        - keyId
+      properties:
+        keyId:
+          type: string
+          description: Identifier of the current key to rotate
+          example: "kid-v1-b41a48b7-a2a1-45f1-b562-1358f141ddb2"
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+
+    EventPayload:
+      type: object
+      description:
+        Payload representing a stored PCR document event with defendant and case details.
+      required:
+        - eventId
+        - materialId
+        - eventType
+        - timestamp
+        - defendant
+      properties:
+        eventType:
+          type: string
+          description: Type of the event, e.g., PRISON_COURT_REGISTER_GENERATED
+          $ref: '#/components/schemas/EventType'
+        eventId:
+          type: string
+          format: uuid
+          description: Unique identifier of the stored PCR document event
+        hearingId:
+          type: string
+          format: uuid
+          description: Unique identifier of the hearing associated with this event
+          example: "7f3b0726-ab6e-8579-2bb4-dd0870bcbf5a"
+        materialId:
+          type: string
+          format: uuid
+          description: Unique identifier of the stored PCR document
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp when the event occurred
+        defendant:
+          type: object
+          required:
+            - masterDefendantId
+            - name
+            - dateOfBirth
+          properties:
+            masterDefendantId:
+              type: string
+              format: uuid
+              description: Unique identifier for the master defendant
+            name:
+              type: string
+              description: Full name of the defendant
+            dateOfBirth:
+              type: string
+              format: date
+              description: Date of birth of the defendant
+            custodyEstablishmentDetails:
+              type: object
+              description: Details of the custody establishment
+              properties:
+                emailAddress:
+                  type: string
+                  format: email
+                  description: Email address of the prison
+            cases:
+              type: array
+              description: List of cases associated with the defendant
+              items:
+                type: object
+                required:
+                  - urn
+                properties:
+                  urn:
+                    type: string
+                    description: Case URN associated with the defendant
+
+    EventNotificationPayload:
+      type: object
+      description: Payload sent to the callback URL when an event occurs
+      required:
+        - eventType
+        - cases
+        - masterDefendantId
+        - documentId
+        - documentGeneratedTimestamp
+        - prisonEmailAddress
+      properties:
+        eventType:
+          description: Type of the event that triggered this notification
+          example: "PRISON_COURT_REGISTER_GENERATED"
+          $ref: '#/components/schemas/EventType'
+        hearingId:
+          type: string
+          format: uuid
+          description: Unique identifier of the hearing that produced the result document
+          example: "7f3b1c2d-4e5a-6789-abcd-ef0123456789"
+        masterDefendantId:
+          type: string
+          format: uuid
+          description: Unique identifier for the master defendant
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        documentId:
+          type: string
+          format: uuid
+          description: Unique identifier of the document used by consumers while fetching it
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        documentGeneratedTimestamp:
+          type: string
+          format: date-time
+          description: Document generation timestamp
+          example: "2024-01-15T10:30:00Z"
+        cases:
+          type: array
+          minItems: 1
+          description: List of cases associated with the defendant
+          items:
+            type: object
+            required:
+              - urn
+            properties:
+              urn:
+                type: string
+                description: Case URN associated with the defendant
+                example: "CT981234123"
+        prisonEmailAddress:
+          type: string
+          format: email
+          description: Email address of the prison
+          example: "prison@example.com"
+
+  examples:
+    EventTypesResponse:
+      summary: Example Event-Types response
+      value:
+        eventTypes: [{
+          eventName: WEE_CustodialSentence,
+          displayName: Warrant for Custodial Sentence,
+          category: WARRANT
+        }]
+
+    createSubscriptionRequest:
+      summary: Example subscription creation request
+      value:
+        notificationEndpoint:
+          callbackUrl: "https://client.example.com/events"
+        eventTypes: [ "PRISON_COURT_REGISTER_GENERATED" ]
+
+    createSubscriptionResponse:
+      summary: Example subscription creation response
+      value:
+        clientSubscriptionId: "aa12f3dd-4cc1-4da7-b9ea-552fa3b9bc44"
+        notificationEndpoint:
+          callbackUrl: "https://client.example.com/events"
+        eventTypes: [ "PRISON_COURT_REGISTER_GENERATED" ]
+        hmac:
+          keyId: "kid-v1-b41a48b7-a2a1-45f1-b562-1358f141ddb2"
+          secret: "example-base64-encoded-secret"
+        createdAt: "2025-01-01T10:00:00Z"
+        updatedAt: null
+
+    createSubscriptionError:
+      summary: Example subscription creation error response
+      value:
+        error: "invalid_request"
+        message: "eventTypes must contain at least one value."
+
+    getSubscriptionResponse:
+      summary: Example GET subscription response
+      value:
+        clientSubscriptionId: "aa12f3dd-4cc1-4da7-b9ea-552fa3b9bc44"
+        notificationEndpoint:
+          callbackUrl: "https://client.example.com/events"
+        eventTypes: [ "PRISON_COURT_REGISTER_GENERATED" ]
+        createdAt: "2025-01-01T10:00:00Z"
+        updatedAt: "2025-01-05T17:30:00Z"
+
+    getSubscriptionError:
+      summary: Example GET subscription error response
+      value:
+        error: "not_found"
+        message: "No subscription exists for ID aa12f3dd-4cc1-4da7-b9ea-552fa3b9bc44."
+
+    updateSubscription:
+      summary: Example update request
+      value:
+        notificationEndpoint:
+          callbackUrl: "https://client.example.com/new-hook"
+        eventTypes: [ "PRISON_COURT_REGISTER_GENERATED" ]
+
+    updatedSubscriptionResponse:
+      summary: Example update subscription response
+      value:
+        clientSubscriptionId: "aa12f3dd-4cc1-4da7-b9ea-552fa3b9bc44"
+        notificationEndpoint:
+          callbackUrl: "https://client.example.com/new-hook"
+        eventTypes: [ "PRISON_COURT_REGISTER_GENERATED" ]
+        createdAt: "2025-01-01T10:00:00Z"
+        updatedAt: "2025-01-10T09:15:00Z"
+
+    PCR:
+      summary: Prison court register example
+      value:
+        eventId: '3fa85f64-5717-4562-b3fc-2c963f66afa6'
+        materialId: '123e4567-e89b-12d3-a456-426614174000'
+        eventType: 'PRISON_COURT_REGISTER_GENERATED'
+        timestamp: '2024-01-15T10:30:00Z'
+        defendant:
+          masterDefendantId: '8b8f1c3a-9a41-4f0f-b8a0-1c23d9e8a111'
+          name: 'John Doe'
+          dateOfBirth: '1990-05-15'
+          custodyEstablishmentDetails:
+            emailAddress: 'prison@moj.gov.uk'
+          cases:
+            - urn: 'CT98KRYCAP'
+            - urn: 'AB75123123'
+
+    NowsCustodialSentence:
+      summary: Nows example
+      value:
+        eventId: 'b37c7a93-4063-40e5-9b0a-0230a3cc2005'
+        materialId: '297b5c16-0983-405c-9128-614554b1c4fe'
+        eventType: 'WEE_CustodialSentence'
+        timestamp: '2025-02-15T10:40:00Z'
+        defendant:
+          masterDefendantId: '8b8f1c3a-9a41-4f0f-b8a0-1c23d9e8a111'
+          name: 'John Doe'
+          dateOfBirth: '1990-05-15'
+          custodyEstablishmentDetails:
+            emailAddress: 'prison@moj.gov.uk'
+          cases:
+            - urn: 'CT98KRYCAP'
+
+    rotateSecretRequest:
+      summary: Example secret rotation request
+      value:
+        keyId: "kid-v1-b41a48b7-a2a1-45f1-b562-1358f141ddb2"
+
+    rotateSecretResponse:
+      summary: Example secret rotation response
+      value:
+        keyId: "kid-v1-b41a48b7-a2a1-45f1-b562-1358f141ddb2"
+        secret: "new-example-base64-encoded-secret"
+
