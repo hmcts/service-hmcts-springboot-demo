@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Colins Landing Page Widget</title>
+  <style>
+    *, ::after, ::before { box-sizing: border-box; }
+    body { margin: 0; font-family: "Segoe UI", sans-serif; padding: 1.5rem; background: #f5f5f5; }
+
+    .landing { background: white; border-radius: 8px; padding: 2rem; max-width: 600px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .landing__title { font-size: 1.4rem; font-weight: 600; color: #1a1a2e; margin: 0 0 0.4rem; }
+    .landing__subtitle { font-size: 0.95rem; color: #666; margin: 0 0 1.5rem; }
+    .landing__links { display: flex; flex-direction: column; gap: 0.75rem; }
+
+    .landing__link {
+      display: flex; align-items: center; gap: 0.75rem;
+      padding: 0.875rem 1rem;
+      background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px;
+      text-decoration: none; color: #0078d4;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .landing__link:hover { background: #e8f4fd; border-color: #0078d4; }
+    .landing__link-icon { font-size: 1.25rem; flex-shrink: 0; }
+    .landing__link-body { display: flex; flex-direction: column; }
+    .landing__link-title { font-weight: 500; font-size: 0.95rem; }
+    .landing__link-desc { font-size: 0.8rem; color: #888; font-weight: 400; margin-top: 0.1rem; }
+  </style>
+  <script type="module" src="./index.ts"></script>
+</head>
+<body>
+
+<div class="landing">
+  <h2 class="landing__title">Welcome to the API Portal</h2>
+  <p class="landing__subtitle">Explore, test, and integrate with our APIs.</p>
+
+  <div class="landing__links">
+    <a class="landing__link" href="/apis">
+      <span class="landing__link-icon">📋</span>
+      <span class="landing__link-body">
+        <span class="landing__link-title">Browse APIs</span>
+        <span class="landing__link-desc">View the full API catalogue and documentation</span>
+      </span>
+    </a>
+    <a class="landing__link" href="/profile">
+      <span class="landing__link-icon">🔑</span>
+      <span class="landing__link-body">
+        <span class="landing__link-title">Get a Subscription Key</span>
+        <span class="landing__link-desc">Sign up or sign in to request access</span>
+      </span>
+    </a>
+    <a class="landing__link" href="https://github.com/hmcts" target="_blank" rel="noopener">
+      <span class="landing__link-icon">📦</span>
+      <span class="landing__link-body">
+        <span class="landing__link-title">HMCTS GitHub</span>
+        <span class="landing__link-desc">Browse source code and OpenAPI specs</span>
+      </span>
+    </a>
+  </div>
+</div>
+
+</body>
+</html>
