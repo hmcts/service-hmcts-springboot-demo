@@ -1,21 +1,3 @@
-import {getValues, Secrets} from "@azure/api-management-custom-widgets-tools"
-import {valuesDefault} from "./values"
+import {askForSecrets} from "@azure/api-management-custom-widgets-tools"
 
-class App {
-  constructor(public readonly secrets: Secrets) {
-    const values = getValues(valuesDefault)
-
-    Object.entries(values).forEach(([key, value]) => {
-      const element = document.getElementById(`values.${key}`)
-      if (element) {
-        if (key === "githubLink" && element instanceof HTMLAnchorElement) {
-          element.href = value
-        } else {
-          element.innerText = value
-        }
-      }
-    })
-  }
-}
-
-export default App
+askForSecrets("app").catch(e => console.error("Failed to connect to Developer Portal.", e))
