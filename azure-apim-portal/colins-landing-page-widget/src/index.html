@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en" class="height-fill">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Colins Landing Page Widget</title>
+  <link rel="stylesheet" href="./styles/app.scss">
+  <script type="module">
+    import {askForSecrets} from "@azure/api-management-custom-widgets-tools"
+    import App from "./index"
+
+    askForSecrets("app")
+      .then(secrets => new App(secrets))
+      .catch(e => console.error("Failed to retrieve secrets from the Developer Portal.", e))
+      .finally(() => {
+        for (const element of document.getElementsByClassName("loading")) {
+          element.classList.remove("loading")
+        }
+      })
+  </script>
+</head>
+<body class="loading">
+
+<div class="landing">
+  <h2 id="values.heading" class="landing__title"></h2>
+  <p id="values.subtitle" class="landing__subtitle"></p>
+
+  <div class="landing__links">
+    <a class="landing__link" href="/apis">
+      <span class="landing__link-icon">📋</span>
+      <span class="landing__link-body">
+        <span class="landing__link-title">Browse APIs</span>
+        <span class="landing__link-desc">View the full API catalogue and documentation</span>
+      </span>
+    </a>
+    <a class="landing__link" href="/profile">
+      <span class="landing__link-icon">🔑</span>
+      <span class="landing__link-body">
+        <span class="landing__link-title">Get a Subscription Key</span>
+        <span class="landing__link-desc">Sign up or sign in to request access</span>
+      </span>
+    </a>
+    <a id="values.githubLink" class="landing__link" href="https://github.com/hmcts" target="_blank" rel="noopener">
+      <span class="landing__link-icon">📦</span>
+      <span class="landing__link-body">
+        <span class="landing__link-title">HMCTS GitHub</span>
+        <span class="landing__link-desc">Browse source code and OpenAPI specs</span>
+      </span>
+    </a>
+  </div>
+</div>
+
+</body>
+</html>

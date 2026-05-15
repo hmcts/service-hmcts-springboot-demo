@@ -1,13 +1,21 @@
-import { buildOnMessageHandlers, sendMessageToParent } from "@azure/api-management-custom-widgets-tools"
+import {getValues, Secrets} from "@azure/api-management-custom-widgets-tools"
+import {valuesDefault} from "./values"
 
-const widgetName = "colins-landing-page-widget"
+class App {
+  constructor(public readonly secrets: Secrets) {
+    const values = getValues(valuesDefault)
 
-// Notify the portal that the widget has loaded
-sendMessageToParent("loaded", { widgetName })
+    Object.entries(values).forEach(([key, value]) => {
+      const element = document.getElementById(`values.${key}`)
+      if (element) {
+        if (key === "githubLink" && element instanceof HTMLAnchorElement) {
+          element.href = value
+        } else {
+          element.innerText = value
+        }
+      }
+    })
+  }
+}
 
-// Handle messages from the portal (e.g. environment info, user context)
-buildOnMessageHandlers({
-  onValues: (values) => {
-    console.log("Widget values received:", values)
-  },
-})
+export default App
