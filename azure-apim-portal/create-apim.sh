@@ -2,8 +2,8 @@
 set -e
 
 # ── Configuration ─────────────────────────────────────────────────────────────
-RESOURCE_GROUP="colin-rg"
-APIM_NAME="colin-apim"
+RESOURCE_GROUP="colindemo-rg"
+APIM_NAME="colindemo"
 LOCATION="uksouth"
 SKU="Developer"          # Developer = cheapest tier that includes Developer Portal (~£0.07/hr)
 PUBLISHER_NAME="Colin Greenwood"

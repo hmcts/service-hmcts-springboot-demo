@@ -2,8 +2,8 @@
 set -e
 
 # ── Configuration ─────────────────────────────────────────────────────────────
-RESOURCE_GROUP="colin-rg"
-APIM_NAME="colin-apim"
+RESOURCE_GROUP="colindemo-rg"
+APIM_NAME="colindemo"
 # ─────────────────────────────────────────────────────────────────────────────
 
 echo ""

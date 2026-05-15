@@ -2,18 +2,20 @@
 set -e
 
 # ── Configuration ─────────────────────────────────────────────────────────────
-RESOURCE_GROUP="colin-rg"
-APIM_NAME="colin-apim"
-API_ID="colin-api"
-API_DISPLAY_NAME="Colins API"
-API_PATH="colin-api"
-PRODUCT_ID="colin-api-product"
-PRODUCT_DISPLAY_NAME="Colins APIs"
+RESOURCE_GROUP="colindemo-rg"
+APIM_NAME="colindemo"
+API_ID="hmcts-api"
+API_DISPLAY_NAME="HMCTS Hearing Results API"
+API_PATH="hmcts"
+PRODUCT_ID="hmcts-product"
+PRODUCT_DISPLAY_NAME="HMCTS API Product"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+DEFAULT_SPEC="$SCRIPT_DIR/openapi-spec.yml"
 # ─────────────────────────────────────────────────────────────────────────────
 
 usage() {
-  echo "Usage: $0 --file <path-to-spec.yaml|json>"
-  echo "       $0 --url  <https://yourapp.com/swagger.json>"
+  echo "Usage: $0 [--file <path-to-spec.yaml|json>] [--url <https://...>]"
+  echo "       Defaults to openapi-spec.yml in the same directory."
   exit 1
 }
 
@@ -28,7 +30,11 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-[[ -z "$SPEC_FILE" && -z "$SPEC_URL" ]] && usage
+# Default to the HMCTS spec if no argument given
+if [[ -z "$SPEC_FILE" && -z "$SPEC_URL" ]]; then
+  SPEC_FILE="$DEFAULT_SPEC"
+fi
+
 [[ -n "$SPEC_FILE" && -n "$SPEC_URL" ]] && { echo "Specify --file OR --url, not both."; exit 1; }
 [[ -n "$SPEC_FILE" && ! -f "$SPEC_FILE" ]] && { echo "File not found: $SPEC_FILE"; exit 1; }
 
