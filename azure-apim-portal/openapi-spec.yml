@@ -13,7 +13,7 @@ info:
 
 
 servers:
-  - url: https://api.example.com
+  - url: https://colindemo.azure-api.net/hmcts
 
 security:
   - bearerAuth: []
