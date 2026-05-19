@@ -9,7 +9,7 @@ https://github.com/hmcts/service-hmcts-crime-springboot-template
 
 
 ## Database
-postgres-springboot3 / postgres-springboot4
+postgres-springboot4
 Flyway, java persistence, jpa repository, jpa entities and integration test with TestContainer / PostgreSQLContainer 
 
 postgres-lock
