@@ -1,0 +1,37 @@
+# Run from repo root:
+#   docker compose -f entra-auth-demo/docker/docker-compose.yml up --build
+#
+# Get a token and call the API:
+#   TOKEN=$(curl -s -X POST http://localhost:8090/entra/token \
+#     -d "grant_type=client_credentials&client_id=demo&client_secret=secret&scope=api://hmcts-demo/.default" \
+#     | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
+#   curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/hello
+
+services:
+  mock-oauth2-server:
+    image: ghcr.io/navikt/mock-oauth2-server:2.1.10
+    ports:
+      - "8090:8090"
+    environment:
+      SERVER_PORT: "8090"
+      JSON_CONFIG_PATH: /config/mock-oauth2-config.json
+    volumes:
+      - ./mock-oauth2-config.json:/config/mock-oauth2-config.json
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://localhost:8090/entra/.well-known/openid-configuration > /dev/null 2>&1 && echo ok || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  api:
+    build:
+      context: ../..
+      dockerfile: entra-auth-demo/docker/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      ENTRA_ISSUER_URI: http://mock-oauth2-server:8090/entra
+    depends_on:
+      mock-oauth2-server:
+        condition: service_healthy
