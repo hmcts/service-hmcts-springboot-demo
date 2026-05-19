@@ -12,34 +12,3 @@ apply{
   from("../gradle/spring-core.gradle")
   from("../gradle/spring-db.gradle")
 }
-
-java {
-  toolchain {
-    languageVersion.set(JavaLanguageVersion.of(21))
-  }
-}
-
-repositories {
-  mavenCentral()
-}
-
-ext {
-  lombokVersion = "1.18.46"
-  mapstructVersion = "1.6.3"
-}
-
-dependencies {
-  // We use lombok for lots of helper annotations such as @Slf4j, @Builder, @AllArgsConstructor
-  implementation "org.projectlombok:lombok:$lombokVersion"
-  annotationProcessor "org.projectlombok:lombok:$lombokVersion"
-  testAnnotationProcessor "org.projectlombok:lombok:$lombokVersion"
-
-  // MapStruct
-  implementation "org.mapstruct:mapstruct:$mapstructVersion"
-  annotationProcessor "org.mapstruct:mapstruct-processor:$mapstructVersion"
-}
-
-test {
-  useJUnitPlatform()
-  include '**/*Test.class'
-}
