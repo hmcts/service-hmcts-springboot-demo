@@ -12,7 +12,7 @@ def azureADOArtifactToken = System.getenv("AZURE_DEVOPS_ARTIFACT_TOKEN")
 
 java {
   toolchain {
-    languageVersion.set(JavaLanguageVersion.of(21))
+    languageVersion.set(JavaLanguageVersion.of(25))
   }
 }
 
