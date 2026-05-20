@@ -7,23 +7,9 @@ plugins {
 version = '1.0.0'
 group = 'uk.gov.hmcts.marketplace'
 
-java {
-  toolchain {
-    languageVersion.set(JavaLanguageVersion.of(21))
-  }
-}
-
-repositories {
-  mavenCentral()
-}
-
 apply {
   from("../gradle/repositories.gradle")
   from("../gradle/java-core.gradle")
   from("../gradle/spring-core.gradle")
-}
-
-dependencies {
-  testRuntimeOnly "org.junit.platform:junit-platform-launcher"
 }
 
