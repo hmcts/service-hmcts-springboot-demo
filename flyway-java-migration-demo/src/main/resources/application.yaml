@@ -1,0 +1,20 @@
+server:
+  port: ${SERVER_PORT:8083}
+
+spring:
+  application:
+    name: flyway-java-migration-demo
+  jpa:
+    open-in-view: false
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/postgres}
+    username: ${DATABASE_USERNAME:postgres}
+    password: ${DATABASE_PASSWORD:postgres}
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    # Java migrations are picked up automatically when annotated with @Component —
+    # Spring Boot registers them as JavaMigration beans and Flyway adds them to the migration set.
+    # By default Flyway scans db.migration package; we override to also include our migration package.
+    java-migration-prefix: V
