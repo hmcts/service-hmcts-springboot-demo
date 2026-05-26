@@ -1,8 +1,14 @@
 def azureADOArtifactRepository = 'https://pkgs.dev.azure.com/hmcts/Artifacts/_packaging/hmcts-lib/maven/v1'
+def azureADOArtifactActor = System.getenv("AZURE_DEVOPS_ARTIFACT_USERNAME")
+def azureADOArtifactToken = System.getenv("AZURE_DEVOPS_ARTIFACT_TOKEN")
 
 repositories {
   mavenCentral()
   maven {
     url = azureADOArtifactRepository
+    credentials {
+      username = azureADOArtifactActor
+      password = azureADOArtifactToken
+    }
   }
 }

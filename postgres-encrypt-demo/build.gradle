@@ -13,31 +13,3 @@ apply{
   from("../gradle/spring-db.gradle")
 }
 
-java {
-  toolchain {
-    languageVersion.set(JavaLanguageVersion.of(21))
-  }
-}
-
-repositories {
-  mavenCentral()
-}
-
-ext {
-  lombokVersion = "1.18.44"
-  mapstructVersion = "1.6.3"
-}
-
-dependencies {
-  implementation "org.projectlombok:lombok:$lombokVersion"
-  annotationProcessor "org.projectlombok:lombok:$lombokVersion"
-  testAnnotationProcessor "org.projectlombok:lombok:$lombokVersion"
-
-  implementation "org.mapstruct:mapstruct:$mapstructVersion"
-  annotationProcessor "org.mapstruct:mapstruct-processor:$mapstructVersion"
-}
-
-test {
-  useJUnitPlatform()
-  include '**/*Test.class'
-}

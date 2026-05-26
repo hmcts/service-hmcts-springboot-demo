@@ -11,6 +11,7 @@ jobs:
     strategy:
       matrix:
         module: [ actuator-demo,
+                  controller-demo,
                   # audit-filter-demo - need to fix up the audit-filter version post merge
                   auth-filter-demo,
                   json-mapper-demo,
@@ -34,6 +35,8 @@ jobs:
       - name: Module tests
         env:
           AZURITE_ACCOUNT_KEY: ${{ vars.AZURITE_ACCOUNT_KEY }}
+          AZURE_DEVOPS_ARTIFACT_USERNAME: ${{ secrets.AZURE_DEVOPS_ARTIFACT_USERNAME }}
+          AZURE_DEVOPS_ARTIFACT_TOKEN: ${{ secrets.AZURE_DEVOPS_ARTIFACT_TOKEN }}
         run: |
           cd ${{ matrix.module }}
           pwd

@@ -1,0 +1,29 @@
+plugins {
+  id("java")
+  id 'org.springframework.boot' version '4.0.6'
+  id 'io.spring.dependency-management' version '1.1.7'
+}
+
+version = '1.0.0'
+group = 'uk.gov.hmcts.marketplace'
+
+apply {
+  from("../gradle/repositories.gradle")
+  from("../gradle/java-core.gradle")
+  from("../gradle/spring-core.gradle")
+}
+
+// Separate config so the API jar can be unpacked/inspected independently if needed
+configurations {
+  apiSpec
+  implementation.extendsFrom apiSpec
+}
+
+dependencies {
+  // Pull in the API jar — contains generated controller interfaces and model classes
+  // Resolved from the Azure DevOps artifact feed (credentials via env vars)
+  apiSpec "uk.gov.hmcts.cp:api-hmcts-crime-template:2.0.2"
+
+  // Swagger annotations used by the generated interfaces
+  implementation 'io.swagger.core.v3:swagger-core:2.2.30'
+}
