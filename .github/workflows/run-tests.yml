@@ -11,6 +11,7 @@ jobs:
     strategy:
       matrix:
         module: [ actuator-demo,
+                  controller-demo,
                   # audit-filter-demo - need to fix up the audit-filter version post merge
                   auth-filter-demo,
                   json-mapper-demo,
