@@ -6,7 +6,7 @@ Demonstrates using **Flyway Java migrations** to run one-off maintenance jobs at
 
 ```
 V1__create_task_table.sql   ← normal SQL migration
-V2__seed_tasks.sql          ← normal SQL migration
+V2__insert_tasks.sql        ← normal SQL migration
 V3__Housekeeping.java   ← Java migration: Spring bean, runs maintenance logic
 ```
 
@@ -73,11 +73,11 @@ flyway-java-migration-demo/
     ├── java/uk/gov/hmcts/marketplace/flyway/
     │   ├── Application.java
     │   └── migration/
-    │       └── V3__DeleteStaleTasks.java   ← @Component extending BaseJavaMigration, injects DataSource
+    │       └── V3__Housekeeping.java   ← @Component extending BaseJavaMigration, injects DataSource
     └── resources/
         └── db/migration/
             ├── V1__create_task_table.sql
-            └── V2__seed_tasks.sql
+            └── V2__insert_tasks.sql
 ```
 
 ## Running locally
