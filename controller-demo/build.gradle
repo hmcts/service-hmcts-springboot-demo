@@ -21,7 +21,8 @@ configurations {
 
 dependencies {
   // Pull in the API jar — contains generated controller interfaces and model classes
-  apiSpec files("../../api-hmcts-crime-template/build/libs/api-hmcts-crime-template-0.0.999.jar")
+  // Resolved from the Azure DevOps artifact feed (credentials via env vars)
+  apiSpec "uk.gov.hmcts.cp:api-hmcts-crime-template:2.0.2"
 
   // Swagger annotations used by the generated interfaces
   implementation 'io.swagger.core.v3:swagger-core:2.2.30'
