@@ -24,6 +24,11 @@ import javax.sql.DataSource;
  * a circular dependency (Flyway → this bean → JdbcTemplate → Flyway).
  * DataSource has no such dependency, so we create a JdbcTemplate from it directly.
  *
+ * Other Spring beans that are safe to inject here (no JPA/Flyway dependency):
+ *   - Azure Service Bus clients — useful for purging stale queue items at startup
+ *   - Spring Environment / @Value config properties
+ *   - Any custom @Service that uses DataSource directly rather than JPA
+ *
  */
 @Component
 @RequiredArgsConstructor
