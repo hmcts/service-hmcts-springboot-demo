@@ -8,20 +8,37 @@ what runs, when it runs, and how to replicate it in a new service.
 
 ---
 
-## Workflows to implement
+## API spec repo workflows (api-hmcts-crime-template)
 
-### 1. `ci-draft.yml` — Build and Publish (Non-Release)
+These live in the **API jar repo** — they validate and publish the OpenAPI spec.
+
+### 1. `lint-openapi.yml` — OpenAPI Linting
+Triggered on **PR to main** and `workflow_dispatch`. Four jobs:
+- **validate-openapi-links** — rejects specs containing internal HMCTS domain URLs (cjscp, justice.gov.uk etc.)
+- **json-lint** — runs `jsonlint` over all JSON schema files under `openapi/schema/`
+- **json-validate** — validates each `.example.json` against its matching `.json` schema using AJV
+- **spectral-lint** — runs `@stoplight/spectral-cli` over all `openapi/*.yml` files
+
+### 2. `publish-openapi-spec.yml` — Publish to SwaggerHub / APIHub
+Reusable workflow (`workflow_call`) called from `ci-draft` and `ci-released`.  
+Uses `hmcts/publish-openapi-spec-to-apihub` to push the spec to SwaggerHub with the release version.
+
+---
+
+## Service repo workflows (service-hmcts-crime-springboot-template)
+
+### 3. `ci-draft.yml` — Build and Publish (Non-Release)
 Triggered on **PR to main** and **push to main**.  
 Calls the reusable `ci-build-publish.yml` workflow.  
 On push: publishes artefact, builds Docker image, triggers ADO deploy pipeline.  
 On PR: build and test only (no publish/deploy).
 
-### 2. `ci-released.yml` — Build and Publish (Release)
+### 4. `ci-released.yml` — Build and Publish (Release)
 Triggered when a **GitHub Release is published** or via `workflow_dispatch`.  
 Validates that the API spec version is fixed (not a SNAPSHOT), then calls `ci-build-publish.yml`
 with `is_release: true` — produces a versioned artefact, Docker image, and ADO deploy.
 
-### 3. `ci-build-publish.yml` — Reusable CI pipeline
+### 5. `ci-build-publish.yml` — Reusable CI pipeline
 Called by `ci-draft` and `ci-released` via `workflow_call`.  
 Jobs:
 - **Artefact-Version** — uses `hmcts/artefact-version-action` to generate a draft or release version
@@ -30,22 +47,22 @@ Jobs:
 - **Build-Docker** — builds and pushes image to `ghcr.io` using `docker/build-push-action`
 - **Deploy** — triggers ADO pipeline via `hmcts/trigger-ado-pipeline`
 
-### 4. `code-analysis.yml` — PMD Static Analysis
+### 6. `code-analysis.yml` — PMD Static Analysis
 Triggered on **PR to main**.  
 Runs PMD against `src/main/java` using a project-level ruleset (`.github/pmd-ruleset.xml`).  
 Fails the build if any violations are found.
 
-### 5. `codeql.yml` — CodeQL + DAST
+### 7. `codeql.yml` — CodeQL + DAST
 Triggered on **PR to main** and on a **weekly schedule**.  
 Jobs:
 - **analyze** — GitHub CodeQL security scan (`security-extended` queries), generates and uploads SBOM (CycloneDX)
 - **DAST** — builds the app, starts it via `docker-compose`, runs OWASP ZAP baseline scan, uploads HTML report
 
-### 6. `secrets-scanner.yml` — Secrets / Credential Leak Detection
+### 8. `secrets-scanner.yml` — Secrets / Credential Leak Detection
 Triggered on **PR to main**, **weekly schedule**, and `workflow_dispatch`.  
 Uses `hmcts/secrets-scanner` (Gitleaks) to scan the full git history for committed secrets.
 
-### 7. `auto-merge-dependabot.yml` — Dependabot Auto-merge
+### 9. `auto-merge-dependabot.yml` — Dependabot Auto-merge
 Triggered on any **pull request** raised by `dependabot[bot]`.  
 Auto-approves and enables auto-merge so Dependabot dependency bumps merge without manual intervention.
 
@@ -55,6 +72,7 @@ Auto-approves and enables auto-merge so Dependabot dependency bumps merge withou
 
 | Secret | Used by |
 |---|---|
+| `SWAGGERHUB_API_KEY` | publish-openapi-spec — push spec to SwaggerHub/APIHub |
 | `AZURE_DEVOPS_ARTIFACT_USERNAME` | ci-build-publish — publish to ADO feed |
 | `AZURE_DEVOPS_ARTIFACT_TOKEN` | ci-build-publish — publish to ADO feed |
 | `HMCTS_CP_ADO_PAT` | ci-build-publish — trigger ADO deploy pipeline |
@@ -65,5 +83,6 @@ Auto-approves and enables auto-merge so Dependabot dependency bumps merge withou
 
 ## Reference implementations
 
-- [`service-hmcts-crime-springboot-template`](https://github.com/hmcts/service-hmcts-crime-springboot-template) — canonical source
+- [`api-hmcts-crime-template`](https://github.com/hmcts/api-hmcts-crime-template) — API spec repo (Spectral lint, publish to APIHub)
+- [`service-hmcts-crime-springboot-template`](https://github.com/hmcts/service-hmcts-crime-springboot-template) — canonical service source
 - [`service-cp-crime-hearing-results-document-subscription`](https://github.com/hmcts/service-cp-crime-hearing-results-document-subscription) — live service using the same set
