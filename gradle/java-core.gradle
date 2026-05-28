@@ -46,3 +46,10 @@ dependencies {
 tasks.withType(Wrapper).configureEach {
   delete "${projectDir}/gradlew.bat"
 }
+
+apply plugin: 'idea'
+idea {
+  module {
+    excludeDirs += file('.claude')
+  }
+}
