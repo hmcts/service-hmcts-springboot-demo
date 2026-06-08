@@ -1,0 +1,5 @@
+ContainerLogV2
+| where PodName startswith "sjp-service-"
+| where LogMessage contains "d6c2e97a-6bb2-481f-991d-5b448e72a2e4"
+| where LogMessage contains "Error"
+| order by TimeGenerated desc
