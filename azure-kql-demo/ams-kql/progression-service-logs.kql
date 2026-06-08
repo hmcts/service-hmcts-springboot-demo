@@ -1,0 +1,15 @@
+let KubePodLogs = (clustername: string, podnameprefix: string)
+{
+    let ContainerIdList = KubePodInventory
+        | where ClusterName =~ clustername
+        | where Name startswith strcat(podnameprefix, "-")
+        | where strlen(ContainerID) > 0
+        | distinct ContainerID, PodLabel, Namespace, PodIp, Name;
+    ContainerLog
+        | where ContainerID in (ContainerIdList)
+        | lookup kind=leftouter (ContainerIdList) on ContainerID
+        | project-away Image, ImageTag, Repository, Name, TimeOfCommand
+        | project-rename PodName=Name1
+};
+KubePodLogs('K8-PRD-CS01-CL02', 'progression-service')
+| order by TimeGenerated asc

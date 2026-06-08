@@ -1,0 +1,14 @@
+let KubePodLogs = (clustername: string, podnameprefix: string)
+{     let ContainerIdList = KubePodInventory
+| where ClusterName =~ clustername
+| where Name startswith strcat(podnameprefix, "-")
+| where strlen(ContainerID) > 0
+| distinct ContainerID, PodLabel, Namespace, PodIp, Name;     ContainerLog
+| where ContainerID in (ContainerIdList)
+| lookup kind=leftouter (ContainerIdList) on ContainerID
+| project-away Image, ImageTag, Repository, Name, TimeOfCommand
+| project-rename PodName=Name1 };
+KubePodLogs('K8-PRD-CS01-CL02', 'sjp-service')
+| where LogEntry contains "d6c2e97a-6bb2-481f-991d-5b448e72a2e4"
+| where LogEntry contains "Error"
+| order by TimeGenerated desc

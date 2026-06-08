@@ -1,0 +1,3 @@
+ContainerLogV2
+| where PodName startswith "progression-service-"
+| order by TimeGenerated asc
