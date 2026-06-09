@@ -1,0 +1,19 @@
+// Context logs for a specific error — logs within ±3s of the error time for a given pod
+// Parameters: ErrorTime, PodName, ErrorType
+let SelectedErrorTime = todatetime("{ErrorTime}");
+let SelectedPodName = "{PodName}";
+
+let TargetContainerIds = KubePodInventory
+    | where strlen(ContainerID) > 0
+    | where Name contains SelectedPodName or PodLabel contains SelectedPodName
+    | distinct ContainerID;
+
+ContainerLog
+| where TimeGenerated >= (SelectedErrorTime - 3s) and TimeGenerated <= (SelectedErrorTime + 1s)
+| where ContainerID in (TargetContainerIds)
+| project
+    TimeGenerated,
+    LogEntry,
+    ErrorTime = SelectedErrorTime
+| order by TimeGenerated asc
+| take 200
