@@ -1,0 +1,35 @@
+package uk.gov.hmcts.cp.filter.audit.util;
+
+import java.io.IOException;
+import java.util.Optional;
+
+import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
+import org.springframework.stereotype.Service;
+
+@Service
+@RequiredArgsConstructor
+public class ClasspathResourceLoader {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ClasspathResourceLoader.class);
+
+    private final ResourceLoader resourceLoader;
+
+    public Optional<Resource> loadFilesByPattern(final String resourcePattern) {
+        try {
+            final PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver(resourceLoader);
+
+            final Resource[] resources = resolver.getResources("classpath*:**/*" + resourcePattern);
+
+            LOGGER.info("Found {} files matching pattern {}", resources.length, resourcePattern);
+
+            return resources.length > 0 ? Optional.of(resources[0]) : Optional.empty();
+        } catch (IOException e) {
+            LOGGER.error("Error loading resources for pattern: {}", resourcePattern, e);
+            return Optional.empty();
+        }
+    }
+}
