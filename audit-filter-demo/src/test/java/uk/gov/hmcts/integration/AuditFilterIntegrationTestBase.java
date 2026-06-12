@@ -8,6 +8,7 @@ import org.springframework.jms.core.JmsTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
@@ -29,7 +30,8 @@ abstract class AuditFilterIntegrationTestBase {
         DockerImageName.parse("apache/activemq-artemis:2.44.0-alpine"))
         .withEnv("ANONYMOUS_LOGIN", "true")
         .withEnv("BROKER_CONFIG_MAX_DISK_USAGE", "100")
-        .withExposedPorts(ARTEMIS_PORT);
+        .withExposedPorts(ARTEMIS_PORT)
+        .waitingFor(Wait.forLogMessage(".*AMQ221007.*", 1)); // wait for "Server is now live"
 
     @DynamicPropertySource
     static void auditProperties(DynamicPropertyRegistry registry) {

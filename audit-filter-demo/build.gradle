@@ -14,8 +14,16 @@ apply {
 }
 
 dependencies {
-  implementation files("../../cp-audit-filter-springboot/build/libs/cp-audit-filter-springboot-0.0.999.jar")
+  // Library sources copied locally — jar no longer needed
+  // implementation files("../../cp-audit-filter-springboot/build/libs/cp-audit-filter-springboot-0.0.999.jar")
+
   implementation "org.springframework.boot:spring-boot-starter-artemis"
+
+  // Required by existing AuditFilter (OpenAPI path param extraction)
+  implementation "io.swagger.parser.v3:swagger-parser:2.1.20"
+  implementation "org.apache.commons:commons-collections4:4.5.0"
+  implementation "org.apache.commons:commons-lang3:3.17.0"
+  implementation "com.fasterxml.jackson.datatype:jackson-datatype-jdk8"
 
   testImplementation "org.testcontainers:testcontainers:2.0.4"
   testImplementation "org.testcontainers:testcontainers-junit-jupiter:2.0.4"
