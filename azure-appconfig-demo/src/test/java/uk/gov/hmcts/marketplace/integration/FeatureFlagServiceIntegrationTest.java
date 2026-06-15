@@ -24,13 +24,13 @@ class FeatureFlagServiceIntegrationTest {
     String dev01 = "DEV01";
 
     @Test
-    void ste30_feature_flag_should_return_false() {
+    void hrds_ste30_feature_flag_should_return_false() {
         FeatureFlagStatus status = featureFlagService.getStatus("hearingResultsDocumentSubscriptionEnabled", ste30);
         assertThat(status.enabled()).isFalse();
     }
 
     @Test
-    void dev01_feature_flag_should_return_true() {
+    void hrds_dev01_feature_flag_should_return_true() {
         FeatureFlagStatus status = featureFlagService.getStatus("hearingResultsDocumentSubscriptionEnabled", dev01);
         assertThat(status.enabled()).isTrue();
     }
