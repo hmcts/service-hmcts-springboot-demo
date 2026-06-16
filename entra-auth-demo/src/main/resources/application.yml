@@ -1,0 +1,11 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  application:
+    name: entra-auth-demo
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${ENTRA_ISSUER_URI:http://localhost:8090/entra}
