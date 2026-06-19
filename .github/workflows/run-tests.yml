@@ -29,6 +29,9 @@ jobs:
           #        azure-azureite-storage
         ]
     runs-on: ubuntu-latest
+    env:
+      APIHUB_ORGANISATION: ${{ vars.APIHUB_ORGANISATION }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -39,6 +42,9 @@ jobs:
           AZURE_DEVOPS_ARTIFACT_USERNAME: ${{ secrets.AZURE_DEVOPS_ARTIFACT_USERNAME }}
           AZURE_DEVOPS_ARTIFACT_TOKEN: ${{ secrets.AZURE_DEVOPS_ARTIFACT_TOKEN }}
         run: |
+          env
+          echo "vars.APIHUB_ORGANISATION is set to \"${{ vars.APIHUB_ORGANISATION }}\""
+          echo "APIHUB_ORGANISATION is set to \"${APIHUB_ORGANISATION}\""
           cd ${{ matrix.module }}
           pwd
           ./gradlew clean test
