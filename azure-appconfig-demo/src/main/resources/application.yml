@@ -1,0 +1,3 @@
+azure:
+  appconfig:
+    endpoint: ${AZURE_APP_CONFIG_ENDPOINT:https://NLE-CCP01-APPCONFIG.azconfig.io}
