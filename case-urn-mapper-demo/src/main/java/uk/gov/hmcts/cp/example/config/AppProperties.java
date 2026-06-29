@@ -8,13 +8,9 @@ import org.springframework.stereotype.Service;
 @Getter
 public class AppProperties {
 
-    private final String caseMapperUrl;
-    private final String caseMapperPath;
+    private final String caseUrnMapperBasePath;
 
-    public AppProperties(
-            @Value("${case-mapper-client.url}") final String caseMapperUrl,
-            @Value("${case-mapper-client.path}") final String caseMapperPath) {
-        this.caseMapperUrl = caseMapperUrl;
-        this.caseMapperPath = caseMapperPath;
+    public AppProperties(@Value("${case-urn-mapper-client.basepath}") final String caseUrnMapperBasePath) {
+        this.caseUrnMapperBasePath = caseUrnMapperBasePath;
     }
 }

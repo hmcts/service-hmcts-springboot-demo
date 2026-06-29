@@ -22,7 +22,7 @@ public class CaseUrnMapperClient {
         final String url = getCaseIdUrl(caseUrn);
         log.info("Getting caseId from {}", url);
         CaseMapperResponse response = restClient.get()
-                .uri("/urnmapper/{caseUrn}", caseUrn)
+                .uri(url)
                 .retrieve()
                 .body(CaseMapperResponse.class);
         log.info("CaseMapperResponse returning caseId:{} for caseUrn:{}", response.getCaseId(), sanitizedCaseUrn);
@@ -30,6 +30,6 @@ public class CaseUrnMapperClient {
     }
 
     private String getCaseIdUrl(final String caseUrn) {
-        return String.format("%s%s/%s", appProperties.getCaseMapperUrl(), appProperties.getCaseMapperPath(), caseUrn);
+        return String.format("%s%s/%s", appProperties.getCaseUrnMapperBasePath(), "/urnmapper", caseUrn);
     }
 }
