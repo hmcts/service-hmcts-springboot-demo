@@ -1,0 +1,156 @@
+package uk.gov.hmcts.cp.filter.audit.service;
+
+import static java.util.UUID.randomUUID;
+import static org.apache.commons.collections.MapUtils.isEmpty;
+import static org.apache.commons.collections.MapUtils.isNotEmpty;
+
+import uk.gov.hmcts.cp.filter.audit.model.AuditPayload;
+import uk.gov.hmcts.cp.filter.audit.model.Metadata;
+import uk.gov.hmcts.cp.filter.audit.model.RequestInfo;
+import uk.gov.hmcts.cp.filter.audit.model.ResponseInfo;
+
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.Map;
+import java.util.Optional;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.StringUtils;
+
+@RequiredArgsConstructor
+public class AuditPayloadGenerationService {
+
+    private static final String ATTRIBUTE_PAYLOAD_KEY = "_payload";
+    private static final String ATTRIBUTE_METADATA_KEY = "_metadata";
+    private static final String HEADER_USER_ID = "CJSCPPUID";
+    private static final String HEADER_CLIENT_CORRELATION_ID = "CPPCLIENTCORRELATIONID";
+    private static final String HEADER_X_CORRELATION_ID = "x-correlation-id";
+
+    private final ObjectMapper objectMapper;
+    private final boolean includePayloadBody;
+
+
+    public AuditPayload generatePayload(final RequestInfo requestInfo) {
+        return generatePayload(requestInfo.contextPath(), requestInfo.payloadBody(), requestInfo.headers(), requestInfo.queryParams(), requestInfo.pathParams());
+    }
+
+    public AuditPayload generatePayload(final ResponseInfo responseInfo) {
+        return generatePayload(responseInfo.contextPath(), responseInfo.payloadBody(), responseInfo.headers(), Map.of(), Map.of());
+    }
+
+    private AuditPayload generatePayload(final String contextPath, final String payloadBody, final Map<String, String> headers, final Map<String, String> queryParams, final Map<String, String> pathParams) {
+        return AuditPayload.builder()
+                .content(constructPayloadWithMetadata(payloadBody, headers, queryParams, pathParams))
+                .timestamp(currentTimestamp())
+                .origin(contextPath)
+                .component(contextPath + "-api")
+                ._metadata(generateMetadata(headers, "audit.events.audit-recorded"))
+                .build();
+    }
+
+    private ObjectNode constructPayloadWithMetadata(final String rawJsonString, final Map<String, String> headers, final Map<String, String> queryParams, final Map<String, String> pathParams) {
+        final Metadata metadata = generateMetadata(headers);
+        final ObjectNode objectNode = includePayloadBody ? parseBody(rawJsonString, metadata) : objectMapper.createObjectNode();
+
+        if (isNotEmpty(queryParams)) {
+            queryParams.forEach((key, value) -> objectNode.set(key, objectMapper.convertValue(value, JsonNode.class)));
+        }
+
+        if (isNotEmpty(pathParams)) {
+            pathParams.forEach((key, value) -> objectNode.set(key, objectMapper.convertValue(value, JsonNode.class)));
+        }
+
+        addMetadataToNode(metadata, objectNode);
+        return objectNode;
+    }
+
+    private ObjectNode parseBody(final String rawJsonString, final Metadata metadata) {
+        try {
+            final JsonNode node = objectMapper.readTree(rawJsonString);
+            return createObjectNode(node, rawJsonString);
+        } catch (JsonProcessingException e) {
+            return createPayloadWithMetadata(rawJsonString, metadata);
+        }
+    }
+
+    private ObjectNode createObjectNode(final JsonNode node, final String rawJsonString) {
+        if (node == null) {
+            return objectMapper.createObjectNode();
+        } else if (node.isObject()) {
+            return (ObjectNode) node;
+        } else if (node.isArray()) {
+            return objectMapper.createObjectNode().set(ATTRIBUTE_PAYLOAD_KEY, node);
+        }
+        return objectMapper.createObjectNode().put(ATTRIBUTE_PAYLOAD_KEY, rawJsonString);
+    }
+
+    private Metadata generateMetadata(final Map<String, String> headers) {
+        if (isEmpty(headers)) {
+            return Metadata.builder().build();
+        }
+
+        return generateMetadata(headers, getHeaderMatchingKey(headers, "Accept", "Content-Type"));
+    }
+
+    private Metadata generateMetadata(final Map<String, String> headers, final String methodName) {
+        if (isEmpty(headers)) {
+            return Metadata.builder().build();
+        }
+
+        final Metadata.MetadataBuilder metadataBuilder = Metadata.builder()
+                .id(randomUUID())
+                .name(methodName)
+                .createdAt(currentTimestamp());
+
+        setOptionalMetadata(headers, metadataBuilder);
+        return metadataBuilder.build();
+    }
+
+    private void setOptionalMetadata(final Map<String, String> headers, final Metadata.MetadataBuilder metadataBuilder) {
+        final String userId = getHeaderMatchingKey(headers, HEADER_USER_ID);
+        final String clientCorrelationId = getHeaderMatchingKey(headers, HEADER_X_CORRELATION_ID, HEADER_CLIENT_CORRELATION_ID);
+
+        if (null != userId) {
+            metadataBuilder.context(Optional.of(new Metadata.Context(userId)));
+        }
+        if (null != clientCorrelationId) {
+            metadataBuilder.correlation(Optional.of(new Metadata.Correlation(clientCorrelationId)));
+        }
+    }
+
+    private String getHeaderMatchingKey(final Map<String, String> headers, final String... keys) {
+        for (final String searchKey : keys) {
+            if (StringUtils.isBlank(searchKey)) {
+                continue;
+            }
+
+            for (final Map.Entry<String, String> entry : headers.entrySet()) {
+                if (entry.getKey() != null && entry.getKey().trim().equalsIgnoreCase(searchKey.trim())) {
+                    return entry.getValue();
+                }
+            }
+
+        }
+        return null;
+    }
+
+    private ObjectNode createPayloadWithMetadata(final String rawJsonString, final Metadata metadata) {
+        final ObjectNode objectNode = objectMapper.createObjectNode();
+        objectNode.put(ATTRIBUTE_PAYLOAD_KEY, rawJsonString);
+        addMetadataToNode(metadata, objectNode);
+        return objectNode;
+    }
+
+    private void addMetadataToNode(final Metadata metadata, final ObjectNode objectNode) {
+        objectNode.set(ATTRIBUTE_METADATA_KEY, objectMapper.valueToTree(metadata));
+    }
+
+    private String currentTimestamp() {
+        return ZonedDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MILLIS).toString();
+    }
+}
