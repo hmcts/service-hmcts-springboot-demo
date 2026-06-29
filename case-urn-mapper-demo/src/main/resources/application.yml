@@ -1,2 +1,6 @@
 case-urn-mapper-client:
   basepath: ${CASE_URN_MAPPER_URL:http://localhost:8090}
+
+case-mapper-client:
+  url: ${CASE_URN_MAPPER_URL:http://localhost:8090}
+  path: /urnmapper
