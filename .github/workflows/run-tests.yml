@@ -19,6 +19,7 @@ jobs:
                   jwt-token-demo,
                   exception-handling-demo,
                   openapi-client-demo,
+                  case-urn-mapper-demo,
           # clock-demo - Not work in pipeline. Oddly
                   postgres-encrypt-demo,
                   postgres-lock,

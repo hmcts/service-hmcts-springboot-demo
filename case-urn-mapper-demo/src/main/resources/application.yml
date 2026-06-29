@@ -1,0 +1,2 @@
+case-urn-mapper-client:
+  basepath: ${AMP_BACKEND_URL:https://devamp01.ingress01.dev.nl.cjscp.org.uk}
