@@ -1,0 +1,61 @@
+openapi: 3.0.0
+info:
+  title: Case URN Mapper API
+  description: Maps a case URN to its corresponding case ID
+  version: 1.0.0
+  contact:
+    email: no-reply@hmcts.com
+  license:
+    name: MIT
+    url: 'https://opensource.org/licenses/MIT'
+
+paths:
+  /urnmapper/{case_urn}:
+    get:
+      description: Get case ID for the given case URN
+      operationId: getCaseIdByCaseUrn
+      tags:
+        - caseUrnMapper
+      parameters:
+        - in: path
+          name: case_urn
+          required: true
+          description: The case URN to translate
+          schema:
+            type: string
+        - in: query
+          name: refresh
+          required: false
+          description: Bypass cache and fetch a fresh mapping
+          schema:
+            type: boolean
+
+      responses:
+        '200':
+          description: Case mapping found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UrnMapperResponse"
+
+components:
+  schemas:
+    UrnMapperResponse:
+      description: Raw downstream mapping response
+      type: object
+      properties:
+        mappingId:
+          type: string
+        sourceId:
+          description: The case URN
+          type: string
+        sourceType:
+          type: string
+        targetId:
+          description: The resolved case ID
+          type: string
+        targetType:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
