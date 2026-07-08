@@ -11,3 +11,5 @@ bin/*
 *.jar
 !**/gradle/wrapper/gradle-wrapper.jar
 *.patch
+.claude/CLAUDE.md
+.claude/worktrees
