@@ -1,0 +1,5 @@
+server:
+  port: 8084
+
+material-client:
+  cjscppuid: ${CJSCPPUID:00000000-0000-0000-0000-000000000000}
