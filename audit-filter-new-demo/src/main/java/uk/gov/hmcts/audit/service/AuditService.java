@@ -28,9 +28,10 @@ public class AuditService {
             throws ServletException, IOException {
 
         switch (auditDecisionService.evaluate(handlerMethod, request)) {
-            case PROCEED_EXCLUDED -> chain.doFilter(request, response);
-            case PROCEED_AUDITED  -> audit(handlerMethod, request, response, chain);
-            default               -> block(response);
+            case PROCEED_EXCLUDED            -> chain.doFilter(request, response);
+            case PROCEED_AUDITED             -> audit(handlerMethod, request, response, chain);
+            case BLOCK_MISSING_CORRELATION_ID -> block(response, "X-Correlation-Id required for Audit");
+            default                          -> block(response, "Audit annotation required");
         }
     }
 
@@ -41,7 +42,7 @@ public class AuditService {
             auditRequest(handlerMethod, request);
         } catch (Exception e) {
             log.error("[AUDIT] Request audit failed, blocking — {}", e.getMessage());
-            block(response);
+            block(response, "Audit failed");
             return;
         }
         chain.doFilter(request, response);
@@ -59,8 +60,8 @@ public class AuditService {
         AuditMdcKeys.ALL.forEach(MDC::remove);
     }
 
-    private void block(final HttpServletResponse response) throws IOException {
+    private void block(final HttpServletResponse response, final String message) throws IOException {
         response.setStatus(HttpStatus.FORBIDDEN.value());
-        response.getWriter().write("Audit required");
+        response.getWriter().write(message);
     }
 }
