@@ -67,7 +67,7 @@ class AuditServiceTest {
 
         verify(response).setStatus(403);
         verify(chain, never()).doFilter(request, response);
-        assertThat(body.toString()).isEqualTo("Audit required");
+        assertThat(body.toString()).isEqualTo("Audit annotation required");
     }
 
     @Test
@@ -80,7 +80,7 @@ class AuditServiceTest {
 
         verify(response).setStatus(403);
         verify(chain, never()).doFilter(request, response);
-        assertThat(body.toString()).isEqualTo("Audit required");
+        assertThat(body.toString()).isEqualTo("X-Correlation-Id required for Audit");
     }
 
     @Test

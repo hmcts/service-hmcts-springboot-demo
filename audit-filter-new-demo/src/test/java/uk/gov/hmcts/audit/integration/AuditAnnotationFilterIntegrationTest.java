@@ -25,21 +25,23 @@ class AuditAnnotationFilterIntegrationTest {
     @Autowired
     private MockMvc mockMvc;
 
+    private static final String VALID_PATH =
+            "/client-subscriptions/3fa85f64-5717-4562-b3fc-2c963f66afa6/documents/7c9e6679-7425-40de-944b-e07fc1f90ae7";
+
     @Test
     void calling_noannotation_endpoint_should_block_with_403() throws Exception {
         mockMvc.perform(get("/noannotation"))
             .andExpect(status().isForbidden())
-            .andExpect(content().string("Audit required"));
+            .andExpect(content().string("Audit annotation required"));
     }
 
-    private static final String VALID_PATH =
-        "/client-subscriptions/3fa85f64-5717-4562-b3fc-2c963f66afa6/documents/7c9e6679-7425-40de-944b-e07fc1f90ae7";
-
+    // In our real services X-Correlation-Id is added upstream by TracingFilter, which must run before AuditFilter.
+    // This test covers the guard for cases where it is absent.
     @Test
     void calling_valid_endpoint_with_missing_correlation_id_should_block_with_403() throws Exception {
         mockMvc.perform(get(VALID_PATH))
             .andExpect(status().isForbidden())
-            .andExpect(content().string("Audit required"));
+            .andExpect(content().string("X-Correlation-Id required for Audit"));
     }
 
     @Test
