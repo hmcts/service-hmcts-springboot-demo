@@ -22,6 +22,7 @@ public class AuditService {
 
     private final AuditDecisionService auditDecisionService;
     private final AuditPayloadGenerationService auditPayloadGenerationService;
+    private final AuditSenderService auditSenderService;
 
     public void process(final HandlerMethod handlerMethod, final HttpServletRequest request,
                         final HttpServletResponse response, final FilterChain chain)
@@ -51,12 +52,12 @@ public class AuditService {
 
     private void auditRequest(final HandlerMethod handlerMethod, final HttpServletRequest request) {
         final String payload = auditPayloadGenerationService.generate(handlerMethod, request, AuditEventType.REQUEST, null);
-        log.info("[AUDIT] request payload={}", payload);
+        auditSenderService.send(payload);
     }
 
     private void auditResponse(final HandlerMethod handlerMethod, final HttpServletRequest request, final int responseStatus) {
         final String payload = auditPayloadGenerationService.generate(handlerMethod, request, AuditEventType.RESPONSE, responseStatus);
-        log.info("[AUDIT] response payload={}", payload);
+        auditSenderService.send(payload);
         AuditMdcKeys.ALL.forEach(MDC::remove);
     }
 

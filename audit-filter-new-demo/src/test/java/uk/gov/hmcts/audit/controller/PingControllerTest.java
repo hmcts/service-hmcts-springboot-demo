@@ -21,19 +21,19 @@ class PingControllerTest {
     private PingController controller;
 
     @Test
-    void valid_should_return_200() {
+    void valid_should_return_200_when_no_spring_audit_filter() {
         final var response = controller.valid(UUID.randomUUID(), UUID.randomUUID());
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 
     @Test
-    void excluded_should_return_200() {
+    void excluded_should_return_200_when_no_spring_audit_filter() {
         assertThat(controller.excluded().getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 
     @Test
-    void no_annotation_should_return_200() {
+    void no_annotation_should_return_200_when_no_spring_audit_filter() {
         assertThat(controller.noAnnotation().getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 }

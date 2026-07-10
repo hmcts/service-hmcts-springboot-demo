@@ -27,6 +27,7 @@ class AuditServiceTest {
 
     @Mock private AuditDecisionService auditDecisionService;
     @Mock private AuditPayloadGenerationService auditPayloadGenerationService;
+    @Mock private AuditSenderService auditSenderService;
     @Mock private HttpServletRequest request;
     @Mock private HttpServletResponse response;
     @Mock private FilterChain chain;
@@ -45,6 +46,7 @@ class AuditServiceTest {
         verify(auditPayloadGenerationService).generate(handlerMethod, request, AuditEventType.REQUEST, null);
         verify(chain).doFilter(request, response);
         verify(auditPayloadGenerationService).generate(handlerMethod, request, AuditEventType.RESPONSE, 200);
+        verify(auditSenderService, org.mockito.Mockito.times(2)).send(any());
     }
 
     @Test

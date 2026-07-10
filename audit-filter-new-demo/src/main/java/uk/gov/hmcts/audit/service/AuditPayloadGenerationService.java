@@ -11,6 +11,8 @@ import org.springframework.web.servlet.HandlerMapping;
 import uk.gov.hmcts.audit.annotation.AuditDetail;
 
 import org.slf4j.MDC;
+import uk.gov.hmcts.audit.misc.service.ClockService;
+import uk.gov.hmcts.audit.misc.service.UuidService;
 import uk.gov.hmcts.audit.model.AuditContext;
 import uk.gov.hmcts.audit.model.AuditEventType;
 import uk.gov.hmcts.audit.model.AuditMdcKeys;
@@ -18,7 +20,6 @@ import uk.gov.hmcts.audit.model.AuditMessage;
 import uk.gov.hmcts.audit.model.AuditMetadata;
 import uk.gov.hmcts.audit.model.AuditPayload;
 
-import java.time.Instant;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.UUID;
@@ -32,6 +33,8 @@ import static uk.gov.hmcts.audit.filter.AuditFilter.CORRELATION_ID_HEADER;
 public class AuditPayloadGenerationService {
 
     private final ObjectMapper objectMapper;
+    private final ClockService clockService;
+    private final UuidService uuidService;
 
     @Value("${material-client.cjscppuid}")
     private String systemUserId;
@@ -46,8 +49,8 @@ public class AuditPayloadGenerationService {
         }
         try {
             final Map<String, UUID> pathParams = extractPathParams(detail, request);
-            final AuditContext context   = new AuditContext(resolveUser());
-            final AuditMetadata metadata = new AuditMetadata(UUID.randomUUID(), detail.eventName(), context);
+            final AuditContext context   = new AuditContext(systemUserId);
+            final AuditMetadata metadata = new AuditMetadata(uuidService.randomUUID(), detail.eventName(), context);
             final AuditPayload content = AuditPayload.builder()
                     .metadata(metadata)
                     .eventType(eventType)
@@ -63,7 +66,7 @@ public class AuditPayloadGenerationService {
             final AuditMessage payload = new AuditMessage(
                     detail.origin(),
                     detail.component(),
-                    Instant.now().toString(),
+                    clockService.now().toString(),
                     content);
             return objectMapper.writeValueAsString(payload);
         } catch (Exception e) {
@@ -96,9 +99,7 @@ public class AuditPayloadGenerationService {
         return method.getBeanType().getAnnotation(AuditDetail.class);
     }
 
-    private String resolveUser() {
-        return systemUserId;
-    }
+
 
     private UUID resolveFromMdc(final String key) {
         final String value = MDC.get(key);

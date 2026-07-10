@@ -12,11 +12,14 @@ import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerMapping;
 import uk.gov.hmcts.audit.annotation.AuditDetail;
 
+import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.test.util.ReflectionTestUtils;
+import uk.gov.hmcts.audit.misc.service.ClockService;
+import uk.gov.hmcts.audit.misc.service.UuidService;
 import uk.gov.hmcts.audit.model.AuditEventType;
 import uk.gov.hmcts.audit.model.AuditMessage;
 import uk.gov.hmcts.audit.model.AuditMetadata;
@@ -33,17 +36,29 @@ class AuditPayloadGenerationServiceTest {
     @Mock private HandlerMethod handlerMethod;
     @Mock private HttpServletRequest request;
     @Spy  private ObjectMapper objectMapper;
+    @Mock private ClockService clockService;
+    @Mock private UuidService uuidService;
 
     @InjectMocks
     private AuditPayloadGenerationService service;
 
+    private static final String SYSTEM_USER_ID = "31ec3a16-8721-498c-8da5-f099390ee254";
+    private static final Instant FIXED_INSTANT = Instant.parse("2026-01-01T00:00:00Z");
+    private static final UUID    FIXED_UUID    = UUID.fromString("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+
     @BeforeEach
     void setUp() {
-        ReflectionTestUtils.setField(service, "systemUserId", "31ec3a16-8721-498c-8da5-f099390ee254");
+        ReflectionTestUtils.setField(service, "systemUserId", SYSTEM_USER_ID);
+    }
+
+    private void stubDynamicServices() {
+        when(clockService.now()).thenReturn(FIXED_INSTANT);
+        when(uuidService.randomUUID()).thenReturn(FIXED_UUID);
     }
 
     @Test
     void generating_payload_should_produce_spec_compliant_envelope_with_origin_component_timestamp_and_content() throws Exception {
+        stubDynamicServices();
         final AuditDetail detail = auditDetail("hearing-results-document", "QUERY_API", "hearing-results-document.get-document", "Download");
         when(handlerMethod.getMethodAnnotation(AuditDetail.class)).thenReturn(detail);
         when(request.getHeader(CORRELATION_ID_HEADER)).thenReturn("corr-abc-123");
@@ -63,6 +78,7 @@ class AuditPayloadGenerationServiceTest {
 
     @Test
     void generating_payload_content_should_include_metadata_action_correlation_id_and_path_params() throws Exception {
+        stubDynamicServices();
         final UUID subId = UUID.fromString("3fa85f64-5717-4562-b3fc-2c963f66afa6");
         final UUID docId = UUID.fromString("7c9e6679-7425-40de-944b-e07fc1f90ae7");
         final AuditDetail detail = auditDetail("hearing-results-document", "QUERY_API", "hearing-results-document.get-document", "Download");
@@ -98,6 +114,7 @@ class AuditPayloadGenerationServiceTest {
 
     @Test
     void generating_payload_should_only_include_declared_path_params() throws Exception {
+        stubDynamicServices();
         final AuditDetail detail = auditDetail("my-service", "COMMAND_API", "my-service.get-item", "View");
         when(handlerMethod.getMethodAnnotation(AuditDetail.class)).thenReturn(detail);
         when(request.getHeader(CORRELATION_ID_HEADER)).thenReturn("corr-xyz");
