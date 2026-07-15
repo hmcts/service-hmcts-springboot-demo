@@ -13,6 +13,7 @@ jobs:
         module: [ actuator-demo,
                   controller-demo,
                   flyway-java-migration-demo,
+                  audit-filter-demo,
                   audit-orig-filter-demo,
                   auth-filter-demo,
                   json-mapper-demo,
