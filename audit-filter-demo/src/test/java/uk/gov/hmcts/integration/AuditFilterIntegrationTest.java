@@ -1,27 +1,37 @@
 package uk.gov.hmcts.integration;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
+import org.skyscreamer.jsonassert.JSONAssert;
+import org.skyscreamer.jsonassert.JSONCompareMode;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.web.client.RestTemplate;
+import uk.gov.hmcts.jms.AuditMessageConsumer;
 
 import java.util.List;
 import java.util.Map;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 @Slf4j
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(
+    webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+    properties = {
+        "cp.audit.jms.reconnect-attempts=0",
+        "cp.audit.jms.initial-connect-attempts=3"
+    }
+)
 class AuditFilterIntegrationTest extends AuditFilterIntegrationTestBase {
+
+    @MockitoBean
+    AuditMessageConsumer auditMessageConsumer;
 
     private final RestTemplate restTemplate = new RestTemplate();
 
     @Test
-    void audit_payload_should_contain_path_param_query_param_and_body_when_body_capture_is_enabled() throws Exception {
+    void posting_to_case_documents_should_produce_request_and_response_audit_payloads() throws Exception {
         final HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         final HttpEntity<Map<String, Object>> request = new HttpEntity<>(
@@ -31,21 +41,41 @@ class AuditFilterIntegrationTest extends AuditFilterIntegrationTestBase {
             "http://localhost:" + port + "/cases/CASE-001/documents?caseType=CIVIL",
             request, String.class);
 
-        Thread.sleep(1000);
-
-        final List<JsonNode> messages = drainAuditQueue();
+        final List<String> messages = drainAuditQueue(2);
         log.info("Received {} audit message(s)", messages.size());
         messages.forEach(m -> log.info("Audit message: {}", m));
 
-        assertThat(messages).isNotEmpty();
+        JSONAssert.assertEquals(expectedRequestPayload(), messages.get(0), JSONCompareMode.LENIENT);
+        JSONAssert.assertEquals(expectedResponsePayload(), messages.get(1), JSONCompareMode.LENIENT);
+    }
 
-        final JsonNode content = messages.get(0).path("content");
-        log.info("Request audit content: {}", content);
+    private String expectedRequestPayload() {
+        return """
+                {
+                  "content": {
+                    "caseId":       "CASE-001",
+                    "caseType":     "CIVIL",
+                    "documentType": "CLAIM_FORM",
+                    "filename":     "claim.pdf",
+                    "_metadata": {}
+                  }
+                }
+                """;
+    }
 
-        assertThat(content.path("caseId").asText()).isEqualTo("CASE-001");         // path param
-        assertThat(content.path("caseType").asText()).isEqualTo("CIVIL");          // query param
-        assertThat(content.path("documentType").asText()).isEqualTo("CLAIM_FORM"); // body
-        assertThat(content.path("filename").asText()).isEqualTo("claim.pdf");      // body
-        assertThat(content.has("_metadata")).isTrue();
+    private String expectedResponsePayload() {
+        return """
+                {
+                  "content": {
+                    "caseId":   "CASE-001",
+                    "caseType": "CIVIL",
+                    "document": {
+                      "documentType": "CLAIM_FORM",
+                      "filename":     "claim.pdf"
+                    },
+                    "_metadata": {}
+                  }
+                }
+                """;
     }
 }
