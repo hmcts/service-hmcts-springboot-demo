@@ -8,7 +8,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import uk.gov.hmcts.cp.audit.model.AuditEventType;
@@ -24,9 +23,8 @@ import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest(properties = "spring.autoconfigure.exclude=uk.gov.hmcts.cp.audit.config.ArtemisAuditAutoConfiguration")
+@SpringBootTest
 @AutoConfigureMockMvc
-@Import(TestAuditConfig.class)
 @ExtendWith(MockitoExtension.class)
 class AuditFilterIntegrationTest {
 

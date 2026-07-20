@@ -14,7 +14,7 @@ apply {
 }
 
 dependencies {
-  implementation "uk.gov.hmcts.cp:cp-audit-springboot-annotations:0.0.2"
+  implementation "uk.gov.hmcts.cp:cp-audit-springboot-annotations:0.0.4"
 
   testRuntimeOnly "org.junit.platform:junit-platform-launcher"
 }
