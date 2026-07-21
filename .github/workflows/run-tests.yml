@@ -13,7 +13,7 @@ jobs:
         module: [ actuator-demo,
                   controller-demo,
                   flyway-java-migration-demo,
-                  # audit-filter-demo - need to fix up the audit-filter version post merge
+                  audit-filter-demo,
                   auth-filter-demo,
                   json-mapper-demo,
                   jwt-token-demo,
