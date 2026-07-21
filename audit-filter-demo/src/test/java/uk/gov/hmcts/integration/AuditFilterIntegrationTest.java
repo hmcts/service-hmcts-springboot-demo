@@ -18,6 +18,8 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -66,5 +68,14 @@ class AuditFilterIntegrationTest {
     void getting_case_document_without_correlation_id_should_return_403() throws Exception {
         mockMvc.perform(get("/cases/3fa85f64-5717-4562-b3fc-2c963f66afa6/documents/7c9e6679-7425-40de-944b-e07fc1f90ae7"))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void getting_case_document_when_audit_send_fails_should_return_503() throws Exception {
+        doThrow(new RuntimeException("Artemis unavailable")).when(auditSenderService).send(any());
+
+        mockMvc.perform(get("/cases/3fa85f64-5717-4562-b3fc-2c963f66afa6/documents/7c9e6679-7425-40de-944b-e07fc1f90ae7")
+                .header("X-Correlation-Id", "b7e23ec2-9f4a-4c2e-8f3d-1a2b3c4d5e6f"))
+                .andExpect(status().isServiceUnavailable());
     }
 }
