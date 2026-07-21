@@ -14,6 +14,7 @@ jobs:
                   controller-demo,
                   flyway-java-migration-demo,
                   audit-filter-demo,
+                  audit-filter-annotations-demo,
                   audit-orig-filter-demo,
                   auth-filter-demo,
                   json-mapper-demo,
@@ -21,7 +22,6 @@ jobs:
                   exception-handling-demo,
                   openapi-client-demo,
                   case-urn-mapper-demo,
-                  audit-filter-annotations-demo,
           # clock-demo - Not work in pipeline. Oddly
                   postgres-encrypt-demo,
                   postgres-lock,
