@@ -37,8 +37,8 @@ class AuditFilterIntegrationTest {
 
     @Test
     void getting_case_document_should_produce_request_and_response_audit_payloads() throws Exception {
-        final var caseId       = UUID.fromString("3fa85f64-5717-4562-b3fc-2c963f66afa6");
-        final var documentId   = UUID.fromString("7c9e6679-7425-40de-944b-e07fc1f90ae7");
+        final var caseId        = UUID.fromString("3fa85f64-5717-4562-b3fc-2c963f66afa6");
+        final var documentId    = UUID.fromString("7c9e6679-7425-40de-944b-e07fc1f90ae7");
         final var correlationId = "b7e23ec2-9f4a-4c2e-8f3d-1a2b3c4d5e6f";
 
         mockMvc.perform(get("/cases/" + caseId + "/documents/" + documentId)
@@ -71,11 +71,11 @@ class AuditFilterIntegrationTest {
     }
 
     @Test
-    void getting_case_document_when_audit_send_fails_should_return_503() throws Exception {
+    void getting_case_document_when_audit_send_fails_should_return_403() throws Exception {
         doThrow(new RuntimeException("Artemis unavailable")).when(auditSenderService).send(any());
 
         mockMvc.perform(get("/cases/3fa85f64-5717-4562-b3fc-2c963f66afa6/documents/7c9e6679-7425-40de-944b-e07fc1f90ae7")
                 .header("X-Correlation-Id", "b7e23ec2-9f4a-4c2e-8f3d-1a2b3c4d5e6f"))
-                .andExpect(status().isServiceUnavailable());
+                .andExpect(status().isForbidden());
     }
 }

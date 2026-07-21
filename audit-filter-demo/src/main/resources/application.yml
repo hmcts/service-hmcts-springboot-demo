@@ -11,6 +11,7 @@ spring:
 cp:
   audit:
     enabled: ${AUDIT_ENABLED:true}
+    block-on-failure: ${AUDIT_BLOCK_ON_FAILURE:true}
     hosts:
       - ${ARTEMIS_HOST_PRIMARY:localhost}
       - ${ARTEMIS_HOST_SECONDARY:localhost}
