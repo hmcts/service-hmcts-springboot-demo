@@ -1,4 +1,4 @@
-package uk.gov.hmcts.marketplace.postgres.encrypt.annotation;
+package uk.gov.hmcts.marketplace.postgres.encrypt.encryption;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

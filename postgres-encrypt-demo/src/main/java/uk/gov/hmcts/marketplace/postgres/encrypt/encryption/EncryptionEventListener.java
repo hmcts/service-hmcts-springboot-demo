@@ -9,7 +9,6 @@ import org.hibernate.event.spi.PreInsertEventListener;
 import org.hibernate.event.spi.PreUpdateEvent;
 import org.hibernate.event.spi.PreUpdateEventListener;
 import org.springframework.stereotype.Component;
-import uk.gov.hmcts.marketplace.postgres.encrypt.annotation.Encrypted;
 
 import java.lang.reflect.Field;
 

@@ -8,26 +8,49 @@ Sensitive fields are encrypted before they reach the database and decrypted auto
 
 ## How it works
 
-### The annotation
+### Encrypting a String field
 
 ```java
 @Encrypted
-private String defendantName;
+private String secureText;
 ```
 
-That is the only change required on an entity field. No converter, no listener registration, no extra configuration per entity.
+That is the only change required. No converter, no listener registration, no extra configuration per entity.
 
-### Under the hood
+### Encrypting an object field
+
+Any object can be encrypted as JSON by implementing `JsonEncryptable` and adding `@Column` to name the column:
+
+```java
+@Encrypted
+@Column(name = "defendent_json")
+private Defendent defendent;
+```
+
+```java
+public class Defendent implements JsonEncryptable {
+    private String name;
+    private LocalDate dateOfBirth;
+}
+```
+
+The object is serialised to JSON, encrypted, and stored as a single `text` column. On load it is decrypted and deserialised back to the original type — transparently.
+
+---
+
+## Under the hood
 
 | Component | Responsibility |
 |---|---|
-| `@Encrypted` | Marks a `String` field as requiring encryption at rest |
+| `@Encrypted` | Marks a field as requiring encryption at rest |
+| `JsonEncryptable` | Marker interface — implement this on any class to enable object encryption |
 | `EncryptionService` | Interface defining `encrypt(String)` / `decrypt(String)` |
 | `StubEncryptionService` | Stub implementation — **replace with Azure Key Vault** (see below) |
-| `EncryptionEventListener` | Hibernate event listener — encrypts the DB-bound state array on `PreInsert`/`PreUpdate`, decrypts entity fields on `PostLoad` |
+| `EncryptionEventListener` | Hibernate listener — encrypts `String` fields on `PreInsert`/`PreUpdate`, decrypts on `PostLoad` |
+| `JsonEncryptableConverter` | JPA `AttributeConverter` — serialises any `JsonEncryptable` to JSON, encrypts it, and auto-applies to all implementing types |
 | `HibernateListenerRegistrar` | Registers the listener globally at startup so every entity is covered automatically |
 
-The listener intercepts Hibernate's own state array (the values it builds the SQL from) rather than modifying the entity in memory. This means the Java object always holds plain text; only the database column ever sees the encrypted value.
+The listener intercepts Hibernate's own state array (the values it builds the SQL from) rather than modifying the entity in memory. The Java object always holds plain text; only the database column ever sees the encrypted value.
 
 ---
 
@@ -35,10 +58,10 @@ The listener intercepts Hibernate's own state array (the values it builds the SQ
 
 The current `StubEncryptionService` wraps values in XML-like tags to make the effect visible during development:
 
-| Layer | Value |
-|---|---|
-| Java (in memory) | `John Smith` |
-| PostgreSQL column | `<ENCRYPT>John Smith</ENCRYPT>` |
+| Layer | String field | Object field |
+|---|---|---|
+| Java (in memory) | `John Smith` | `Defendent{name="Jane Doe", ...}` |
+| PostgreSQL column | `<ENCRYPTED>John Smith</ENCRYPTED>` | `<ENCRYPTED>{"type":"...Defendent","data":{...}}</ENCRYPTED>` |
 
 **This is not real encryption.** It exists purely to make the encrypt/decrypt lifecycle visible without external dependencies.
 
@@ -103,7 +126,7 @@ Tests use Testcontainers to spin up a real Postgres instance automatically — n
 ./gradlew test
 ```
 
-`CaseRepositoryTest` verifies two things:
+`CaseRepositoryTest` verifies in a single test:
 
-1. A raw JDBC query against the `hmcts_case` table confirms `defendant_name` is **not** stored as plain text.
-2. Loading the same row via `CaseRepository` returns the original plain-text value — demonstrating transparent decryption.
+1. Raw JDBC queries against `hmcts_case` confirm both `secure_text` and `defendent_json` are **not** stored as plain text.
+2. Loading the same row via `CaseRepository` returns the original plain-text values — demonstrating transparent decryption for both a `String` field and an object field.
