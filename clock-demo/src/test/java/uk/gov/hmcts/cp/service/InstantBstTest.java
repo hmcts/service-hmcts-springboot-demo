@@ -8,7 +8,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -37,7 +36,7 @@ public class InstantBstTest {
     @Test
     void nine_thirty_summer_utc_instant_should_be_ten_thirty_bst() {
         Instant instantSummer = Instant.parse("2025-08-01T09:30:00Z");
-        LocalDateTime ldt = LocalDateTime.ofInstant(instantSummer, ZoneOffset.systemDefault());
+        LocalDateTime ldt = LocalDateTime.ofInstant(instantSummer, ZoneId.of("Europe/London"));
         assertThat(ldt.toString()).endsWith("10:30");
     }
 }

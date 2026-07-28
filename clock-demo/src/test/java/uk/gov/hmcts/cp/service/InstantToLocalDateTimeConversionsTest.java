@@ -6,7 +6,6 @@ import org.junit.jupiter.api.Test;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -23,7 +22,7 @@ public class InstantToLocalDateTimeConversionsTest {
     @Test
     void instant_should_convert_to_ldt() {
         Instant instant = Instant.parse("2025-08-01T09:30:00Z");
-        LocalDateTime ldt = LocalDateTime.ofInstant(instant, ZoneOffset.systemDefault());
+        LocalDateTime ldt = LocalDateTime.ofInstant(instant, ZoneId.of("Europe/London"));
         assertThat(ldt.toString()).isEqualTo("2025-08-01T10:30");
     }
 }
