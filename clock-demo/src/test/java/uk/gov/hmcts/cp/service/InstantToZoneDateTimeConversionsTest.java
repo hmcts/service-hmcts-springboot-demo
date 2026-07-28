@@ -25,7 +25,7 @@ public class InstantToZoneDateTimeConversionsTest {
     @Test
     void instant_should_convert_to_zdt() {
         Instant instant = Instant.parse("2025-08-01T09:30:00Z");
-        ZonedDateTime zdt = ZonedDateTime.ofInstant(instant, ZoneOffset.systemDefault());
+        ZonedDateTime zdt = ZonedDateTime.ofInstant(instant, ZoneId.of("Europe/London"));
         assertThat(zdt.toString()).isEqualTo("2025-08-01T10:30+01:00[Europe/London]");
     }
 }
