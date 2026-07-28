@@ -8,7 +8,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import uk.gov.hmcts.cp.audit.model.AuditEventType;
@@ -19,14 +18,15 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest(properties = "spring.autoconfigure.exclude=uk.gov.hmcts.cp.audit.config.ArtemisAuditAutoConfiguration")
+@SpringBootTest
 @AutoConfigureMockMvc
-@Import(TestAuditConfig.class)
 @ExtendWith(MockitoExtension.class)
 class AuditFilterIntegrationTest {
 
@@ -37,8 +37,8 @@ class AuditFilterIntegrationTest {
 
     @Test
     void getting_case_document_should_produce_request_and_response_audit_payloads() throws Exception {
-        final var caseId       = UUID.fromString("3fa85f64-5717-4562-b3fc-2c963f66afa6");
-        final var documentId   = UUID.fromString("7c9e6679-7425-40de-944b-e07fc1f90ae7");
+        final var caseId        = UUID.fromString("3fa85f64-5717-4562-b3fc-2c963f66afa6");
+        final var documentId    = UUID.fromString("7c9e6679-7425-40de-944b-e07fc1f90ae7");
         final var correlationId = "b7e23ec2-9f4a-4c2e-8f3d-1a2b3c4d5e6f";
 
         mockMvc.perform(get("/cases/" + caseId + "/documents/" + documentId)
@@ -67,6 +67,15 @@ class AuditFilterIntegrationTest {
     @Test
     void getting_case_document_without_correlation_id_should_return_403() throws Exception {
         mockMvc.perform(get("/cases/3fa85f64-5717-4562-b3fc-2c963f66afa6/documents/7c9e6679-7425-40de-944b-e07fc1f90ae7"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void getting_case_document_when_audit_send_fails_should_return_403() throws Exception {
+        doThrow(new RuntimeException("Artemis unavailable")).when(auditSenderService).send(any());
+
+        mockMvc.perform(get("/cases/3fa85f64-5717-4562-b3fc-2c963f66afa6/documents/7c9e6679-7425-40de-944b-e07fc1f90ae7")
+                .header("X-Correlation-Id", "b7e23ec2-9f4a-4c2e-8f3d-1a2b3c4d5e6f"))
                 .andExpect(status().isForbidden());
     }
 }

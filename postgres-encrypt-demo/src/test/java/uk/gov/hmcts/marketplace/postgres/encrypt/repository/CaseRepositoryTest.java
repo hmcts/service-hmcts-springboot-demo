@@ -8,19 +8,16 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ContextConfiguration;
 import uk.gov.hmcts.marketplace.postgres.encrypt.config.TestContainersInitialise;
 import uk.gov.hmcts.marketplace.postgres.encrypt.domain.CaseEntity;
+import uk.gov.hmcts.marketplace.postgres.encrypt.domain.Defendent;
+
+import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Verifies that @Encrypted fields are stored encrypted in the database
- * and decrypted transparently when loaded through the repository.
- */
 @SpringBootTest
 @ExtendWith(TestContainersInitialise.class)
 @ContextConfiguration(initializers = TestContainersInitialise.class)
 class CaseRepositoryTest {
-
-    private static final String DEFENDANT = "John Smith";
 
     @Autowired
     private CaseRepository caseRepository;
@@ -28,41 +25,36 @@ class CaseRepositoryTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    LocalDate dateOfBirth = LocalDate.of(2000,1,1);
+    Defendent defendent = Defendent.builder()
+            .name("Jane Doe")
+            .dateOfBirth(dateOfBirth)
+            .build();
+    CaseEntity caseEntity = CaseEntity.builder()
+            .caseReference("REF-001")
+            .secureText("John Smith")
+            .defendent(defendent)
+            .build();
+
     @Test
-    void shouldEncryptDefendantNameInDatabase() {
-        CaseEntity saved = caseRepository.save(
-            CaseEntity.builder()
-                .caseReference("REF-001")
-                .defendantName(DEFENDANT)
-                .build()
-        );
+    void secure_fields_should_be_encrypted_in_database_and_decrypted_on_load() {
+        CaseEntity saved = caseRepository.save(caseEntity);
 
-        String rawDbValue = jdbcTemplate.queryForObject(
-            "select defendant_name from hmcts_case where id = ?",
-            String.class,
-            saved.getId()
-        );
+        assertEncrypted(saved.getId(), "secure_text");
+        assertEncrypted(saved.getId(), "defendent_json");
 
-        assertThat(rawDbValue)
-            .as("defendant name must be stored with stub encryption wrapper")
-            .isEqualTo("<ENCRYPT>" + DEFENDANT + "</ENCRYPT>");
+        CaseEntity read = caseRepository.findById(saved.getId()).get();
+        assertThat(read.getSecureText()).isEqualTo("John Smith");
+        assertThat(read.getDefendent().getName()).isEqualTo("Jane Doe");
+        assertThat(read.getDefendent().getDateOfBirth()).isEqualTo(dateOfBirth);
     }
 
-    @Test
-    void shouldDecryptDefendantNameOnLoad() {
-        CaseEntity saved = caseRepository.save(
-            CaseEntity.builder()
-                .caseReference("REF-002")
-                .defendantName(DEFENDANT)
-                .build()
-        );
+    private void assertEncrypted(long id, String fieldName) {
+        assertThat(getFieldFromDatabase(id, fieldName)).startsWith("<ENCRYPTED>").endsWith("</ENCRYPTED>");
+    }
 
-        caseRepository.flush();
-
-        CaseEntity loaded = caseRepository.findById(saved.getId()).orElseThrow();
-
-        assertThat(loaded.getDefendantName())
-            .as("defendant name must be decrypted transparently on load")
-            .isEqualTo(DEFENDANT);
+    private String getFieldFromDatabase(long id, String fieldName) {
+        String query = String.format("select %s from hmcts_case where id=%d", fieldName, id);
+        return jdbcTemplate.queryForObject(query, String.class);
     }
 }

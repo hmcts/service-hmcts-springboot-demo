@@ -29,6 +29,13 @@ TestContainer with standard PostgresSQLContainer - simplest implementation with 
 TestContainer with custom GenericContainer wrapper - allows implementation of custom test container
 Docker with avast docker-compose - allows spin up containers using docker-compose embedded in gradle
 
+api-test-demo
+Api test written as a JUnit5 + RestTemplate test against a docker-compose stack
+
+karate-test-demo
+Same docker-compose api-test wiring as api-test-demo, but the test is a Karate DSL `.feature`
+file instead
+
 
 ## Filters
 audit-filter

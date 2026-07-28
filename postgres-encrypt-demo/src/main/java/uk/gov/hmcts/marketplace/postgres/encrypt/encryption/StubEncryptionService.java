@@ -12,8 +12,8 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class StubEncryptionService implements EncryptionService {
 
-    private static final String PREFIX = "<ENCRYPT>";
-    private static final String SUFFIX = "</ENCRYPT>";
+    private static final String PREFIX = "<ENCRYPTED>";
+    private static final String SUFFIX = "</ENCRYPTED>";
 
     @Override
     public String encrypt(String plainText) {
