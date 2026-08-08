@@ -1,0 +1,25 @@
+// Count errors by service in sit namespace since RecentDate parameter
+let ContainerIdList = KubePodInventory
+    | where strlen(ContainerID) > 0
+    | distinct ContainerID, PodLabel, Namespace, PodIp, Name;
+
+let RecentPeriodStart = todatetime("{RecentDate}");
+
+ContainerLog
+| where TimeGenerated >= RecentPeriodStart
+| where ContainerID in (ContainerIdList)
+| lookup kind=leftouter (ContainerIdList) on ContainerID
+| project-away Image, ImageTag, Repository, Name, TimeOfCommand
+| project-rename PodName=Name1
+| where LogEntry contains " ERROR "
+| where Namespace contains "sit"
+| extend ServiceName = extract(@"([a-zA-Z-]+service)", 1, PodName)
+| where isnotempty(ServiceName)
+| summarize
+    ErrorCount = count(),
+    UniqueErrorTypes = dcount(LogEntry),
+    FirstErrorTime = min(TimeGenerated),
+    LastErrorTime = max(TimeGenerated),
+    AffectedPods = dcount(PodName)
+    by ServiceName
+| order by ErrorCount desc

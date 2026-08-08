@@ -1,0 +1,119 @@
+// Table of all new clean error types across all services and contexts
+// Shows errors that are new since RecentPeriodStart compared to historical 63-day period
+
+let RecentPeriodStart = todatetime("{RecentDate}");
+let RecentPeriodEnd = now();
+let HistoricalPeriodStart = RecentPeriodStart - 63d;
+let HistoricalPeriodEnd = RecentPeriodStart;
+
+let InvestigatedErrors = datatable(CleanErrorType: string, Status: string, JiraTicket: string, Notes: string)
+[
+    "Error: Something wrong with Azure APIM invocation with url: URL for application proceedings concluded. applicationId: UUID in hearing: [UUID]", "✅ Resolved", "DD-40192", "LAA switched SSL on in their Test Env. This has been reverted now"
+];
+
+let ContainerIdList = KubePodInventory
+    | where strlen(ContainerID) > 0
+    | distinct ContainerID, PodLabel, Namespace, PodIp, Name;
+
+let CleanErrorMessage = (logEntry: string) {
+    let rawError = case(
+        logEntry contains "EJBTransactionRolledbackException:", extract(@"EJBTransactionRolledbackException:\s*(.+)", 1, logEntry),
+        logEntry contains "Exception:", extract(@"(\w+Exception):\s*(.+?)(?:\n|\r|\.?\s*at\s|$)", 0, logEntry),
+        logEntry contains "Error:", extract(@"Error:\s*(.+?)(?:\n|\r|$)", 1, logEntry),
+        logEntry contains " ERROR ", extract(@"ERROR[^\]]*\]\s*(.+?)(?:\n|\r|$)", 1, logEntry),
+        "Unknown Error"
+    );
+    let step0 = replace_regex(rawError, @"""[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}""", """UUID""");
+    let step1 = replace_regex(step0, @"[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}", "UUID");
+    let step2 = replace_regex(step1, @"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z?", "TIMESTAMP");
+    let step3 = replace_regex(step2, @"\d{2}/\w{3}/\d{4}:\d{2}:\d{2}:\d{2}", "TIMESTAMP");
+    let step4 = replace_regex(step3, @"\b[a-fA-F0-9]{32,}\b", "HASH");
+    let step5 = replace_regex(step4, @"\b[a-fA-F0-9]{16,31}\b", "ID");
+    let step6 = replace_regex(step5, @"https?://[^\s""]+", "URL");
+    let step7 = replace_regex(step6, @"\b\d{5,}\b", "NUMBER");
+    let step8 = replace_regex(step7, @"Thread-\d+", "Thread-X");
+    let step9 = replace_regex(step8, @"task-\d+", "task-X");
+    let step10 = replace_regex(step9, @":\d{4,5}\b", ":PORT");
+    let step11 = replace_regex(step10, @"Invalid major creditor code [A-Z0-9]+ encountered", "Invalid major creditor code XXXX encountered");
+    let step12 = replace_regex(step11, @"java:/(?:app/[^/]+/)?DS\.[a-zA-Z-]+", "java:/DS.CONNECTION_POOL");
+    let step13 = replace_regex(step12, @"\d{4}-\d{2}-\d{2}", "YYYY-MM-DD");
+    let step14 = replace_regex(step13, @"Request [a-fA-F0-9-]+ failed", "Request REQUEST_ID failed");
+    let step15 = replace_regex(step14, @"streamId: '[a-fA-F0-9-]+'", "streamId: 'STREAM_ID'");
+    let step16 = replace_regex(step15, @"eventId: '[a-fA-F0-9-]+", "eventId: 'EVENT_ID");
+    let step17 = replace_regex(step16, @"hearingId: [a-fA-F0-9-]+", "hearingId: HEARING_ID");
+    let step18 = replace_regex(step17, @"defendantId: [a-fA-F0-9-]+", "defendantId: DEFENDANT_ID");
+    let step19 = replace_regex(step18, @"offenceId: [a-fA-F0-9-]+", "offenceId: OFFENCE_ID");
+    let step20 = replace_regex(step19, @"version=\d+", "version=X");
+    let step21 = replace_regex(step20, @"sequence=\d+", "sequence=X");
+    let step21b = replace_regex(step21, @":[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}([,}])", ":UUID$1");
+    let step21c = replace_regex(step21b, @"\[[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}", "[UUID");
+    let step22 = replace_regex(step21c, @"""[A-Z]{2,4}[0-9]{0,2}""", """CREDITOR_CODE""");
+    let step23 = replace_regex(step22, @"\/[a-zA-Z-]+\/[a-zA-Z-]+\/[a-zA-Z-]+\.jar", "/SERVICE/PATH/file.jar");
+    let step24 = replace_regex(step23, @"combination null, \d{4}-\d{2}-\d{2}, null, null", "combination null, DATE, null, null");
+    let step25 = replace_regex(step24, @"EE-ManagedExecutorService-default-Thread-\d+", "EE-ManagedExecutorService-default-Thread-X");
+    let step26 = replace_regex(step25, @"ServerService Thread Pool -- \d+", "ServerService Thread Pool -- X");
+    let step27 = replace_regex(step26, @"xid=< formatId=[^,]+, gtrid_length=[^,]+, bqual_length=[^,]+, tx_uid=[^,]+, node_name=[^,]+, branch_uid=[^,]+, subordinatenodename=[^,]+, eis_name=[^>]+ >", "xid=< TRANSACTION_ID >");
+    let step27b = replace_regex(step27, @"preparedXid=< formatId=[^,]+, gtrid_length=[^,]+, bqual_length=[^,]+, tx_uid=[^,]+, node_name=[^,]+, branch_uid=[^,]+, subordinatenodename=[^,]+, eis_name=[^>]+ >", "preparedXid=< PREPARED_TRANSACTION_ID >");
+    let step28 = replace_regex(step27b, @"Rule_[^@]+@[a-fA-F0-9]+", "Rule_ACCESS_CONTROL@MEMORY_ADDRESS");
+    let step29 = replace_regex(step28, @"Request UUID failed\s+expected \d+ but got (\d+) with reason ""([^""]+)""", "Request REQUEST_ID failed expected STATUS but got $1 with reason \"$2\"");
+    let step30 = replace_regex(step29, @"""version"":\d+", "\"version\":X");
+    let step31 = replace_regex(step30, @"currentXid=\{[^}]+\}", "currentXid=CURRENT_XID");
+    let step32 = replace_regex(step31, @"SLF4J: See https?://[^\s]+ for further details\.", "SLF4J: See URL for further details.");
+    let step33 = replace_regex(step32, @"SLF4J: Failed to load class ""[^""]+""", "SLF4J: Failed to load class \"CLASS_NAME\"");
+    let step34 = replace_regex(step33, @"@[a-fA-F0-9]{6,8}", "@MEMORY_ADDRESS");
+    let step35 = replace_regex(step34, @"""documentTypeDescription"":""[^""]+""", """documentTypeDescription"":""DOCUMENT_TYPE""");
+    let step36 = replace_regex(step35, @"""documentCategory"":""[^""]+""", """documentCategory"":""DOCUMENT_CATEGORY""");
+    let step37 = replace_regex(step36, @"""causation"":\[([UUID,]*UUID)\]", """causation"":[CAUSATION_IDS]");
+    let step38 = replace_regex(step37, @"Thread-X \(ActiveMQ-client-global-threads\)", "Thread-X (ActiveMQ-client-global-threads)");
+    let step39 = replace_regex(step38, @"""fileCloudLocation"":""[^""]+""", """fileCloudLocation"":""FILE_LOCATION""");
+    let step40 = replace_regex(step39, @"""documentType"":""[^""]+""", """documentType"":""DOCUMENT_TYPE""");
+    step40
+};
+
+ContainerLog
+| where TimeGenerated >= HistoricalPeriodStart and TimeGenerated <= RecentPeriodEnd
+| where ContainerID in (ContainerIdList)
+| lookup kind=leftouter (ContainerIdList) on ContainerID
+| project-away Image, ImageTag, Repository, Name, TimeOfCommand
+| project-rename PodName=Name1
+| where LogEntry contains " ERROR "
+| where Namespace contains "sit"
+| extend ServiceName = extract(@"([a-zA-Z-]+service)", 1, PodName)
+| extend CleanErrorType = CleanErrorMessage(LogEntry)
+| where isnotempty(CleanErrorType) and CleanErrorType != "Unknown Error"
+| extend TimePeriod = case(
+    TimeGenerated >= RecentPeriodStart and TimeGenerated <= RecentPeriodEnd, "Recent",
+    TimeGenerated >= HistoricalPeriodStart and TimeGenerated < HistoricalPeriodEnd, "Historical",
+    "Other"
+)
+| where TimePeriod in ("Recent", "Historical")
+| summarize
+    RecentCount = countif(TimePeriod == "Recent"),
+    HistoricalCount = countif(TimePeriod == "Historical"),
+    FirstSeen = min(TimeGenerated),
+    LastSeen = max(TimeGenerated),
+    AffectedServices = dcount(ServiceName),
+    SampleLogEntry = take_any(LogEntry),
+    Services = make_set(ServiceName)
+    by CleanErrorType
+| where HistoricalCount == 0 and RecentCount > 0
+| extend ServicesAffected = strcat_array(Services, ", ")
+| join kind=leftouter (InvestigatedErrors) on CleanErrorType
+| extend InvestigationStatus = coalesce(Status, "🔍 Pending")
+| extend JiraTicketDisplay = iff(isnotempty(JiraTicket), strcat("🎫 ", JiraTicket), "")
+| extend JiraUrl = iff(isnotempty(JiraTicket), strcat("https://tools.hmcts.net/jira/browse/", JiraTicket), "")
+| extend Notes = coalesce(Notes, "")
+| project
+    CleanErrorType,
+    RecentCount,
+    AffectedServices,
+    ServicesAffected,
+    FirstSeen,
+    LastSeen,
+    SampleLogEntry,
+    InvestigationStatus,
+    JiraTicketDisplay,
+    JiraUrl,
+    Notes
+| order by RecentCount desc, CleanErrorType asc
+| take 100

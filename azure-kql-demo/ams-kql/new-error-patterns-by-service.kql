@@ -1,0 +1,58 @@
+// New error patterns by service since RecentDate, compared against 63-day historical baseline
+// Parameters: RecentDate, ServiceFilter (* for all services)
+
+let ContainerIdList = KubePodInventory
+    | where strlen(ContainerID) > 0
+    | distinct ContainerID, PodLabel, Namespace, PodIp, Name;
+
+let ExtractErrorType = (logEntry: string) {
+    case(
+        logEntry contains "Exception:", extract(@"(\w+Exception)", 1, logEntry),
+        logEntry contains "Error:", extract(@"Error: ([^,\n\r]+)", 1, logEntry),
+        logEntry contains "ERROR", extract(@"ERROR[^\w]*([^,\n\r\[\]]+)", 1, logEntry),
+        "Generic ERROR"
+    )
+};
+
+let RecentPeriodStart = todatetime("{RecentDate}");
+let HistoricalPeriodStart = RecentPeriodStart - 63d;
+let HistoricalPeriodEnd = RecentPeriodStart;
+
+ContainerLog
+| where TimeGenerated >= HistoricalPeriodStart
+| where ContainerID in (ContainerIdList)
+| lookup kind=leftouter (ContainerIdList) on ContainerID
+| project-away Image, ImageTag, Repository, Name, TimeOfCommand
+| project-rename PodName=Name1
+| where LogEntry !contains "MicroSoftOfficeClientNotificationException: Status code: 500"
+| where LogEntry !contains "PocaEmailsTask Failed to process file: com.sun.mail.util.MailConnectException: Couldn't connect to host"
+| where LogEntry !contains "No case found for the given notification id"
+| where LogEntry !contains "Failed to connect or to read the response from T-Engine"
+| where LogEntry contains " ERROR "
+| where Namespace contains "sit"
+| extend ServiceName = extract(@"([a-zA-Z-]+service)", 1, PodName)
+| where "{ServiceFilter}" == "*" or ServiceName == "{ServiceFilter}"
+| extend ErrorType = ExtractErrorType(LogEntry)
+| where isnotempty(ErrorType)
+| extend TimePeriod = case(
+    TimeGenerated >= RecentPeriodStart, "Recent",
+    TimeGenerated >= HistoricalPeriodStart and TimeGenerated < HistoricalPeriodEnd, "Historical",
+    "Other"
+)
+| where TimePeriod in ("Recent", "Historical")
+| summarize
+    RecentCount = countif(TimePeriod == "Recent"),
+    HistoricalCount = countif(TimePeriod == "Historical"),
+    FirstSeen = min(TimeGenerated),
+    LastSeen = max(TimeGenerated),
+    SampleLogEntry = take_any(LogEntry),
+    RecentPods = make_set_if(PodName, TimePeriod == "Recent"),
+    HistoricalPods = make_set_if(PodName, TimePeriod == "Historical"),
+    AffectedServices = make_set_if(ServiceName, TimePeriod == "Recent")
+    by ErrorType, Namespace
+| extend NewPods = set_difference(RecentPods, HistoricalPods)
+| extend IsCompletelyNewError = (HistoricalCount == 0)
+| extend HasNewPods = (array_length(set_difference(RecentPods, HistoricalPods)) > 0)
+| where RecentCount > 0 and (HistoricalCount == 0 or HasNewPods == true)
+| project ErrorType, RecentCount, HistoricalCount, IsCompletelyNewError, HasNewPods, FirstSeen, LastSeen, AffectedServices
+| order by RecentCount desc, ErrorType

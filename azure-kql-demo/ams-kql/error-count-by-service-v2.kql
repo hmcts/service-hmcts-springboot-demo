@@ -1,0 +1,16 @@
+// Count errors by service in sit namespace since RecentDate parameter
+let RecentPeriodStart = todatetime("{RecentDate}");
+ContainerLogV2
+| where TimeGenerated >= RecentPeriodStart
+| where Namespace contains "sit"
+| where LogMessage contains " ERROR "
+| extend ServiceName = extract(@"([a-zA-Z-]+service)", 1, PodName)
+| where isnotempty(ServiceName)
+| summarize
+    ErrorCount = count(),
+    UniqueErrorTypes = dcount(LogMessage),
+    FirstErrorTime = min(TimeGenerated),
+    LastErrorTime = max(TimeGenerated),
+    AffectedPods = dcount(PodName)
+    by ServiceName
+| order by ErrorCount desc
