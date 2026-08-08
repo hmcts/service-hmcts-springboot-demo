@@ -14,8 +14,10 @@ apply {
 }
 
 dependencies {
-  implementation "uk.gov.hmcts.cp:cp-audit-springboot-annotations:0.0.6"
+  implementation "uk.gov.hmcts.cp:cp-audit-springboot-annotations:0.0.8"
 
+  testImplementation "org.skyscreamer:jsonassert:1.5.3"
+  testImplementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310"
   testRuntimeOnly "org.junit.platform:junit-platform-launcher"
 }
 
