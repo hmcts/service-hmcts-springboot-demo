@@ -1,0 +1,39 @@
+# Run from repo root:
+#   ./entra-emulator-demo/gradlew -p entra-emulator-demo bootJar
+#   docker compose -f entra-emulator-demo/docker/docker-compose.yml up --build
+#
+# Provision a daemon application and get a token for it:
+#   curl -s -X POST http://localhost:8080/api/entra/daemon-applications \
+#     -H 'Content-Type: application/json' \
+#     -d '{"displayName":"AMP-1106 Job","appIdUri":"api://amp-1106-job","appRoles":["app.read"]}'
+
+services:
+  entra-local:
+    # Pinned by digest: the emulator is a community project and :latest moves.
+    image: ghcr.io/cmaneu/entra-local@sha256:b29df9b2f8b406796316555e24dc31cd1d1d493b10c06e10c46389be7d1a9035
+    platform: linux/amd64
+    ports:
+      - "8443:8443"
+    environment:
+      TENANT_ID: "11111111-1111-1111-1111-111111111111"
+    volumes:
+      - entra-local-data:/app/data
+    # The image ships its own HEALTHCHECK polling /health over TLS; api waits on it.
+
+  api:
+    build:
+      context: ../..
+      dockerfile: entra-emulator-demo/docker/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      ENTRA_BASE_URL: https://entra-local:8443
+      ENTRA_ADMIN_BASE_URL: https://entra-local:8443/admin/api
+      ENTRA_TENANT_ID: "11111111-1111-1111-1111-111111111111"
+      ENTRA_TRUST_SELF_SIGNED: "true"
+    depends_on:
+      entra-local:
+        condition: service_healthy
+
+volumes:
+  entra-local-data:

@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: entra-emulator-demo
+
+entra:
+  base-url: ${ENTRA_BASE_URL:https://localhost:8443}
+  tenant-id: ${ENTRA_TENANT_ID:11111111-1111-1111-1111-111111111111}
+  admin-base-url: ${ENTRA_ADMIN_BASE_URL:https://localhost:8443/admin/api}
+  trust-self-signed: ${ENTRA_TRUST_SELF_SIGNED:true}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+logging:
+  level:
+    uk.gov.hmcts.amp.entra.emulator: INFO

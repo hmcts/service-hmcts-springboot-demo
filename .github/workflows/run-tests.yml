@@ -30,6 +30,7 @@ jobs:
                   servicebus-retry-demo,
                   servicebus-queue-demo,
                   servicebus-topic-demo,
+                  entra-emulator-demo,
           #        azure-azureite-storage
         ]
     runs-on: ubuntu-latest
