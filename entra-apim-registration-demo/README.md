@@ -21,8 +21,9 @@ Entra, Graph and APIM are Microsoft cloud services, so none of them runs in Dock
 | Microsoft Graph and Azure API Management | [WireMock](https://wiremock.org/) | answers to the calls that create an application, add a secret and create a subscription, with fresh made-up values each time |
 
 The app itself is real: the sign-in, the requests it makes, their order, what it keeps and what it cleans up.
-The demo proves that **flow**. It does **not** prove Microsoft would accept the requests; for that you need real
-credentials, which is a configuration change (the addresses and secrets in `application.yml`), not a code change.
+The stand-ins show the **flow**; they do not prove Microsoft would accept the requests. For that, see
+[Against the real thing](#against-the-real-thing): the same app has been run against the real Graph and the real
+sandbox APIM, and doing so was not just a change of addresses (it needed a retry the stand-ins never asked for).
 
 ## Run it
 
@@ -89,8 +90,67 @@ They need no Docker and no network: the requests are checked against a mock serv
 clients, and the HTTP surface (401 when not signed in, CSRF for a browser session, one user cannot see
 another's application) with MockMvc.
 
-## Going real
+## Against the real thing
 
-The same settings, with Microsoft's addresses and real credentials: an app registration with
-`Application.ReadWrite.OwnedBy` for Graph, and a service principal that can manage subscriptions on the APIM
-instance. The Entra sign-in becomes a normal tenant's `issuer-uri`. See `application.yml`.
+The app is the same; the settings point at Microsoft. Nothing below is needed for the offline demo.
+
+**What has been run for real** (7 October 2026): this app's own Graph and APIM clients, against the real External ID
+tenant and the real sandbox APIM. Register an application, connect an API, remove it, delete the application: all
+worked, and everything created was deleted and checked gone. And the app's sign-in was taken as far as Microsoft's
+real `HMCTSEXTSBOX` login page.
+
+**What it showed that the stand-ins did not.** Straight after an application is created, the real Graph refuses the
+next calls about it for a few seconds: the service principal with `403 Authorization_RequestDenied`, the secret with a
+`4xx`. The first real run failed on exactly that, so `EntraGraphClient` now retries those two calls (4 attempts, 2
+seconds apart) and the tests cover it. The APIM management API also went on listing a deleted subscription for several
+minutes.
+
+**What has not.** A real user completing the sign-in (that needs your own account and password). And whether a token
+from the application it creates is accepted by APIM, which sits in the corporate tenant while the application is in the
+External ID tenant: no API was called with what was issued.
+
+### Settings
+
+Everything is overridable with `SPRING_APPLICATION_JSON` (shown with placeholders):
+
+```json
+{
+  "spring": { "security": { "oauth2": {
+    "client": {
+      "registration": { "entra": { "client-id": "<the sign-in app>", "client-secret": "<its secret>", "scope": ["openid", "profile", "email"] } },
+      "provider": { "entra": {
+        "authorization-uri": "https://<tenant-name>.ciamlogin.com/<tenant-id>/oauth2/v2.0/authorize",
+        "token-uri":         "https://<tenant-name>.ciamlogin.com/<tenant-id>/oauth2/v2.0/token",
+        "jwk-set-uri":       "https://<tenant-name>.ciamlogin.com/<tenant-id>/discovery/v2.0/keys" } } },
+    "resourceserver": { "jwt": { "jwk-set-uri": "https://<tenant-name>.ciamlogin.com/<tenant-id>/discovery/v2.0/keys" } } } } },
+  "registration": {
+    "entra": { "tokenUrl": "https://login.microsoftonline.com/<tenant-id>/oauth2/v2.0/token",
+               "graphBaseUrl": "https://graph.microsoft.com/v1.0",
+               "clientId": "<an identity that may create applications>", "clientSecret": "<its secret>" },
+    "apim": { "tokenUrl": "https://login.microsoftonline.com/<apim-tenant-id>/oauth2/v2.0/token",
+              "armBaseUrl": "https://management.azure.com",
+              "clientId": "<a service principal that may manage subscriptions>", "clientSecret": "<its secret>",
+              "subscriptionId": "<azure subscription>", "resourceGroup": "<rg>", "serviceName": "<apim name>",
+              "products": { "hearing-results": "<an APIM product id>" } } }
+}
+```
+
+Two addresses differ, and both are real: **users sign in at `<tenant-name>.ciamlogin.com`** (the External ID
+authority), while **the app-only token for Graph comes from `login.microsoftonline.com/<tenant-id>`**.
+
+### Sign-in without editing the app registration
+
+The marketplace's sign-in app is already registered for `http://localhost:3100/auth/callback`. This app's callback is
+that path, so run it on that port and the real sign-in works as it is:
+
+```bash
+SERVER_PORT=3100 SPRING_APPLICATION_JSON='...' ./gradlew bootRun     # then open http://localhost:3100
+```
+
+The stand-in does not mind the path, so the offline demo is unaffected.
+
+### The APIM credential
+
+The service principal for APIM does not exist yet. Until it does, anything that needs a token for Azure Resource
+Manager needs one from somewhere: `az account get-access-token --resource https://management.azure.com` gives you
+your own, which is what the real runs used (through a small local shim answering the token request).

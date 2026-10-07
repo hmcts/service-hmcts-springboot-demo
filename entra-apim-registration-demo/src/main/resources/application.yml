@@ -14,7 +14,7 @@ spring:
             client-id: demo-web
             client-secret: demo-web-secret
             authorization-grant-type: authorization_code
-            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            redirect-uri: "{baseUrl}/auth/callback"
             scope: openid,profile
         provider:
           # Spelled out rather than discovered, so the app starts (and its tests run) with no Entra

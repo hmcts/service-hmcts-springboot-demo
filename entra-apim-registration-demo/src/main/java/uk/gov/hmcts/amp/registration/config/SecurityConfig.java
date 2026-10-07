@@ -31,7 +31,12 @@ public class SecurityConfig {
                 .requestMatchers("/", "/index.html", "/app.js", "/style.css", "/error", "/actuator/health")
                 .permitAll()
                 .anyRequest().authenticated())
-            .oauth2Login(login -> login.defaultSuccessUrl("/", true))
+            // The callback is /auth/callback, not Spring's default /login/oauth2/code/entra, because that is the
+            // address the marketplace's Entra sign-in app is already registered for (on port 3100), so the
+            // demo can sign in against the real tenant without anyone editing the app registration.
+            .oauth2Login(login -> login
+                .defaultSuccessUrl("/", true)
+                .redirectionEndpoint(redirect -> redirect.baseUri("/auth/callback")))
             .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()))
             // The page reads this cookie and sends it back as a header on each change. A bearer token
             // needs none of this: Spring does not ask for it on a request that carries one.

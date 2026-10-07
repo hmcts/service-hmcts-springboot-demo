@@ -22,6 +22,7 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withNoContent;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withForbiddenRequest;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withResourceNotFound;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
@@ -46,7 +47,7 @@ class ClientsTest {
             new RegistrationProperties.Apim("http://arm-entra/token", "http://arm", "apim-id", "a-secret",
                 "sub-1", "rg-1", "apim-1", Map.of()));
         TokenClient tokens = new TokenClient(http);
-        entra = new EntraGraphClient(http, tokens, properties);
+        entra = new EntraGraphClient(http, tokens, properties, java.time.Duration.ZERO);
         apim = new ApimClient(http, tokens, properties);
     }
 
@@ -75,6 +76,37 @@ class ClientsTest {
         assertThat(registration.clientId()).isEqualTo("client-1");
         assertThat(registration.clientSecret()).isEqualTo("s3cret");
         assertThat(registration.keyId()).isEqualTo("key-1");
+        server.verify();
+    }
+
+    @Test
+    void calls_graph_refuses_just_after_creating_an_application_should_be_retried_as_the_real_graph_needs() {
+        expectToken("http://entra/token");
+        server.expect(requestTo("http://graph/applications"))
+            .andRespond(withSuccess("{\"id\":\"object-1\",\"appId\":\"client-1\"}", MediaType.APPLICATION_JSON));
+        // What the real Graph answers a moment after the application exists: a 403 for the service principal...
+        server.expect(requestTo("http://graph/servicePrincipals")).andRespond(withForbiddenRequest());
+        server.expect(requestTo("http://graph/servicePrincipals"))
+            .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
+        // ...and a 4xx for the secret.
+        server.expect(requestTo("http://graph/applications/object-1/addPassword")).andRespond(withResourceNotFound());
+        server.expect(requestTo("http://graph/applications/object-1/addPassword"))
+            .andRespond(withSuccess("{\"keyId\":\"key-1\",\"secretText\":\"s3cret\"}", MediaType.APPLICATION_JSON));
+
+        assertThat(entra.register("My App").clientSecret()).isEqualTo("s3cret");
+        server.verify();
+    }
+
+    @Test
+    void a_graph_call_that_keeps_being_refused_should_give_up_after_four_attempts() {
+        expectToken("http://entra/token");
+        server.expect(requestTo("http://graph/applications"))
+            .andRespond(withSuccess("{\"id\":\"object-1\",\"appId\":\"client-1\"}", MediaType.APPLICATION_JSON));
+        for (int attempt = 0; attempt < 4; attempt++) {
+            server.expect(requestTo("http://graph/servicePrincipals")).andRespond(withForbiddenRequest());
+        }
+
+        assertThatThrownBy(() -> entra.register("My App")).isInstanceOf(RuntimeException.class);
         server.verify();
     }
 
