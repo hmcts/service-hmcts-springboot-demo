@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Entra and APIM registration demo</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header>
+    <h1>Register an application</h1>
+    <p class="lead">Sign in with Entra, register an application to get a <strong>Client ID and Client Secret</strong>,
+      then connect it to an API to get a <strong>Subscription Key</strong> from API Management.</p>
+    <p class="note">Everything here is a local stand-in for Microsoft. Nothing leaves your machine.</p>
+  </header>
+
+  <main>
+    <section id="signed-out" hidden>
+      <h2>1. Sign in</h2>
+      <p>You sign in with Entra. Here, Entra is a stand-in running in Docker: enter any username.</p>
+      <p><a class="button" href="/oauth2/authorization/entra">Sign in with Entra</a></p>
+    </section>
+
+    <section id="signed-in" hidden>
+      <p class="who">Signed in as <strong id="who-name"></strong> <span id="who-via" class="muted"></span>
+        <button id="sign-out" class="link">Sign out</button></p>
+
+      <h2>2. Register an application</h2>
+      <form id="create-form">
+        <label for="app-name">Application name</label>
+        <input id="app-name" name="name" maxlength="100" required autocomplete="off">
+        <button type="submit">Register</button>
+      </form>
+
+      <div id="secret-box" class="notice" hidden role="status">
+        <h3>Copy your Client Secret now</h3>
+        <p>Entra shows it once. It is not stored here and cannot be shown again.</p>
+        <p>Client ID <code id="new-client-id"></code></p>
+        <p>Client Secret <code id="new-client-secret"></code></p>
+      </div>
+
+      <h2>3. Your applications</h2>
+      <p id="none" class="muted">You have no applications yet.</p>
+      <div id="apps"></div>
+    </section>
+
+    <p id="error" class="error" role="alert" hidden></p>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>

@@ -37,6 +37,17 @@ Same docker-compose api-test wiring as api-test-demo, but the test is a Karate D
 file instead
 
 
+## Entra and APIM
+
+entra-apim-registration-demo
+The API Marketplace credential journey, runnable on a laptop: sign in with Entra, register an application to get a Client ID
+and Client Secret (Graph), connect an API to get a Subscription Key (APIM), and take them away again.
+Entra runs in docker as mock-oauth2-server, Graph and APIM as a WireMock stand-in.
+
+entra-auth-demo
+Spring Boot as an OAuth2 resource server validating Entra bearer tokens, with mock-oauth2-server standing in for Entra
+
+
 ## Filters
 audit-filter
 Intercept incoming requests and pass to apache/activemq-artemis

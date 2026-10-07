@@ -1,0 +1,53 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  application:
+    name: entra-apim-registration-demo
+  security:
+    oauth2:
+      client:
+        registration:
+          # The browser sign-in: "Sign in with Entra", an authorization-code login against the stand-in.
+          entra:
+            provider: entra
+            client-id: demo-web
+            client-secret: demo-web-secret
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            scope: openid,profile
+        provider:
+          # Spelled out rather than discovered, so the app starts (and its tests run) with no Entra
+          # reachable. The real Entra publishes the same three addresses at
+          # https://login.microsoftonline.com/<tenant>/v2.0/.well-known/openid-configuration.
+          entra:
+            authorization-uri: ${ENTRA_AUTHORIZE_URL:http://localhost:8090/entra/authorize}
+            token-uri: ${ENTRA_TOKEN_URL:http://localhost:8090/entra/token}
+            jwk-set-uri: ${ENTRA_JWKS_URL:http://localhost:8090/entra/jwks}
+            user-name-attribute: sub
+      resourceserver:
+        jwt:
+          # Bearer tokens from the same issuer, for calling the API without a browser.
+          jwk-set-uri: ${ENTRA_JWKS_URL:http://localhost:8090/entra/jwks}
+
+registration:
+  entra:
+    # What the app uses to ask Microsoft Graph to create applications. In the real thing this is an
+    # app registration with Application.ReadWrite.OwnedBy; here any secret works.
+    token-url: ${ENTRA_TOKEN_URL:http://localhost:8090/entra/token}
+    graph-base-url: ${ENTRA_GRAPH_BASE_URL:http://localhost:8099/graph}
+    client-id: demo-onboarding
+    client-secret: demo-onboarding-secret
+  apim:
+    token-url: ${APIM_TOKEN_URL:http://localhost:8090/arm/token}
+    arm-base-url: ${APIM_ARM_BASE_URL:http://localhost:8099/arm}
+    client-id: demo-apim
+    client-secret: demo-apim-secret
+    subscription-id: 00000000-0000-0000-0000-000000000000
+    resource-group: rg-demo
+    service-name: apim-demo
+    # The APIs on offer, mapped to the APIM Product behind each. Examples for the demo.
+    products:
+      hearing-results: cp-crime-hearing-results
+      court-listings-and-scheduling: cp-crime-schedulingandlisting
+      crime-prosecution-case-details: cp-crime-prosecution-case-details

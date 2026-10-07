@@ -1,0 +1,30 @@
+# The two stand-ins this demo needs. Run from the repo root:
+#
+#   docker compose -f entra-apim-registration-demo/docker/docker-compose.yml up -d
+#
+#   mock-entra  Microsoft Entra: sign-in (an authorization-code login with a login page) and the tokens
+#               the app uses to call Graph and Azure. The repo's usual stand-in, as in entra-auth-demo.
+#   stand-in    Microsoft Graph and Azure API Management: answers the calls that create an application, add
+#               a client secret and create a subscription, with fresh made-up values each time.
+#
+# The app itself runs on your machine (./gradlew bootRun), not in Docker: the browser and the app must
+# both reach Entra at http://localhost:8090, which is the address inside the tokens it issues.
+services:
+  mock-entra:
+    image: ghcr.io/navikt/mock-oauth2-server:2.1.10
+    ports:
+      - "8090:8090"
+    environment:
+      SERVER_PORT: "8090"
+      JSON_CONFIG_PATH: /config/mock-entra-config.json
+    volumes:
+      - ./mock-entra-config.json:/config/mock-entra-config.json:ro
+    # No healthcheck: this image has no shell or wget to run one with. run-demo.sh waits for it from outside.
+
+  stand-in:
+    image: wiremock/wiremock:3.9.1
+    command: ["--global-response-templating", "--verbose"]
+    ports:
+      - "8099:8080"
+    volumes:
+      - ./stand-in:/home/wiremock:ro

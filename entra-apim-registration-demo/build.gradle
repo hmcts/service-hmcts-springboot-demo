@@ -1,0 +1,23 @@
+plugins {
+  id("java")
+  id 'org.springframework.boot' version '4.0.6'
+  id 'io.spring.dependency-management' version '1.1.7'
+}
+
+version = '1.0.0'
+group = 'uk.gov.hmcts.amp'
+
+apply {
+  from("../gradle/repositories.gradle")
+  from("../gradle/java-core.gradle")
+  from("../gradle/spring-core.gradle")
+}
+
+dependencies {
+  implementation 'org.springframework.boot:spring-boot-starter-security'
+  // "Sign in with Entra": a browser login against the Entra stand-in, kept as a session...
+  implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+  // ...and bearer tokens from the same issuer, so a script can call the API without a browser.
+  implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
+  testImplementation 'org.springframework.security:spring-security-test'
+}

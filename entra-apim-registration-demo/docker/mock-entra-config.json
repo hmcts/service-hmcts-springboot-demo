@@ -1,0 +1,23 @@
+{
+  "interactiveLogin": true,
+  "httpServer": "NettyWrapper",
+  "tokenCallbacks": [
+    {
+      "issuerId": "entra",
+      "tokenExpiry": 3600,
+      "requestMappings": [
+        {
+          "requestParam": "grant_type",
+          "match": "client_credentials",
+          "claims": {
+            "sub": "demo-script",
+            "name": "Demo Script",
+            "preferred_username": "demo-script@example.com",
+            "oid": "00000000-0000-0000-0000-000000000001",
+            "tid": "demo-tenant"
+          }
+        }
+      ]
+    }
+  ]
+}
