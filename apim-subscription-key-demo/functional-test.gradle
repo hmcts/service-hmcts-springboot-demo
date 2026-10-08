@@ -1,0 +1,36 @@
+// The functional tests talk to the real Azure, so they are their own task and are never part of `test`:
+// the pipeline has no Azure credential. Run them from a machine that is signed in:
+//
+//   az login
+//   ./gradlew functionalTest
+//
+// They are also @Disabled at the class, so take that off to actually run them.
+tasks.register('functionalTest', Test) {
+  description = "Runs the functional tests against the real Azure APIM instance"
+  group = "Verification"
+
+  testClassesDirs = sourceSets.test.output.classesDirs
+  classpath = sourceSets.test.runtimeClasspath
+  useJUnitPlatform()
+  filter {
+    includeTestsMatching '*Functional*'
+  }
+
+  // These tests list what is really on the instance, so their output is the point of running them.
+  testLogging {
+    events "passed", "skipped", "failed", "standardOut", "standardError"
+    exceptionFormat "full"
+    showStandardStreams = true
+    showExceptions = true
+    showCauses = true
+    showStackTraces = true
+  }
+
+  outputs.upToDateWhen { false }
+
+  afterSuite { desc, result ->
+    if (!desc.parent) {
+      println "\nTest Results: ${result.resultType} (${result.testCount} tests, ${result.successfulTestCount} passed, ${result.failedTestCount} failed, ${result.skippedTestCount} skipped)"
+    }
+  }
+}
