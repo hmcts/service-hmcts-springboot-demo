@@ -11,6 +11,7 @@ jobs:
     strategy:
       matrix:
         module: [ actuator-demo,
+                  apim-subscription-key-demo,
                   controller-demo,
                   flyway-java-migration-demo,
                   audit-filter-demo,

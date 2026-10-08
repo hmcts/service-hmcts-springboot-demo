@@ -37,6 +37,13 @@ Same docker-compose api-test wiring as api-test-demo, but the test is a Karate D
 file instead
 
 
+## Azure APIM
+apim-subscription-key-demo
+Create, list, read and delete Azure API Management subscription keys with the Azure SDK and DefaultAzureCredential,
+against the real sandbox APIM. Documents the exact Azure RBAC actions a service needs to do it, and the terraform
+and workload identity that grant them.
+
+
 ## Filters
 audit-filter
 Intercept incoming requests and pass to apache/activemq-artemis
