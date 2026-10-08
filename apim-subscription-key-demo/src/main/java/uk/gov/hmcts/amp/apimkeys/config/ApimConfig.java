@@ -4,6 +4,7 @@ import com.azure.core.management.AzureEnvironment;
 import com.azure.core.management.profile.AzureProfile;
 import com.azure.identity.DefaultAzureCredentialBuilder;
 import com.azure.resourcemanager.apimanagement.ApiManagementManager;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -15,6 +16,7 @@ public class ApimConfig {
      * Tenant and subscription come from AZURE_TENANT_ID and AZURE_SUBSCRIPTION_ID, so neither GUID is in the repo.
      */
     @Bean
+    @ConditionalOnMissingBean
     public ApiManagementManager apiManagementManager(final ApimProperties config) {
         return ApiManagementManager.authenticate(
                 new DefaultAzureCredentialBuilder().build(),

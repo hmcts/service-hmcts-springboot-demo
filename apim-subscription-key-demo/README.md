@@ -76,9 +76,10 @@ apim.subscriptions().delete(rg, service, name, "*");
 
 Two things in there are worth knowing before you write the same against any other API Management instance:
 
-- **A key is always a second call.** Since api-version 2019-01-01 Azure leaves `primaryKey` and `secondaryKey`
-  out of both `get` and `list`, so `create` and `get` each follow up with `listSecrets`. That is why listing can
-  be done by something not allowed to see any key at all - and it is the hinge the least privilege below turns on.
+- **Reading a key is a second call.** Azure leaves `primaryKey` and `secondaryKey` out of both `get` and `list`,
+  so `get` follows up with `listSecrets`. That is why listing can be done by something not allowed to see any
+  key at all - and it is the hinge the least privilege below turns on. `create` is the exception: the response
+  to the PUT does carry both keys, so its `listSecrets` call is one round trip that could be saved.
 - **`delete` takes an `If-Match`.** Azure rejects an APIM entity delete without one; the SDK makes it an argument
   you cannot leave out, so `"*"` ("whatever version is there now") is explicit rather than forgotten.
 
@@ -132,6 +133,57 @@ Between them they prove what the unit tests cannot: that `DefaultAzureCredential
 tenant, subscription, resource group and service name point at something real, that the credential has
 `subscriptions/read` and `subscriptions/listSecrets/action` - a separate permission from the read, and the one
 most likely to have been missed - and that `delete` is sending the `If-Match` Azure insists on.
+
+### Testing it in a pipeline
+
+The functional tests need an Azure credential, so they cannot run in CI. `ApimSubscriptionKeyIntegrationTest`
+walks the same journey through the same Spring wiring, with WireMock where API Management would be.
+
+```bash
+cd apim-subscription-key-demo
+./gradlew test                              # unit and integration tests, as the pipeline runs them
+./gradlew test --tests '*IntegrationTest'   # just this one
+```
+
+No `az login`, no environment variables, no Docker: WireMock runs inside the test JVM on a dynamic port. That
+is the whole point - this is the only one of the three kinds of test here that a pipeline can run.
+
+| | Catches a wrong URL, body or header? | Runs in CI? |
+|---|---|---|
+| `ApimSubscriptionKeyServiceTest` | no - mocks the SDK's `Subscriptions` interface | yes |
+| `ApimSubscriptionKeyIntegrationTest` | yes | yes |
+| `ApimSubscriptionKeyFunctionalTest` | yes, against the real Azure | no - needs a credential |
+
+WireMock rather than a container that mimics API Management, because no such container exists. The only one
+Microsoft ships is the self-hosted gateway, which is data plane only and will not start without a real instance
+to take its configuration from, and nothing at all emulates `management.azure.com`. Running WireMock in Docker
+would be possible; embedded, it can also assert on what the app *sent*, which is the part worth testing.
+
+`WireMockApimInitialise` does the standing up, in the same shape as the `TestContainersInitialise` the
+postgres demos use - so the test itself is only the journey:
+
+```java
+@SpringBootTest
+@ContextConfiguration(initializers = WireMockApimInitialise.class)
+```
+
+It starts WireMock and registers an `ApiManagementManager` pointed at it. The app's own manager bean is
+`@ConditionalOnMissingBean`, so it steps aside when one is already there; everything else in the context is the
+app's own. Inside, an `AzureEnvironment` whose `resourceManagerEndpointUrl` is the WireMock, and an empty
+`HttpPipeline` - empty because it leaves out the bearer token policy, which refuses a plain-HTTP address, which
+is also why no credential is needed at all.
+
+The stubbing lives in the initialiser too. `stubSubscriptionLifecycle(name)` sets up one subscription that
+behaves - absent until created, readable once it is, absent again once deleted - using a WireMock scenario to
+hold the state. So the journey's last assertion, that a deleted subscription is gone, follows from the delete
+rather than from a stub put there to say so.
+
+Asserting on what was sent is what makes it worth having. Change the scope the service puts in its create, the
+`If-Match` on its delete, or make the delete a no-op, and the test goes red - none of which the unit tests can
+see.
+
+The fixtures in `src/test/resources/__files` are the shapes real ARM returned for these calls, with the keys
+replaced. What WireMock can never show is Azure changing its mind; only the functional tests can.
 
 ## What Azure permissions the service needs
 
