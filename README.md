@@ -44,6 +44,17 @@ against the real sandbox APIM. Documents the exact Azure RBAC actions a service 
 and workload identity that grant them.
 
 
+## Entra
+entra-node-login-demo
+Sign in with Microsoft Entra and show the user's oid, name and email. A tiny Node app, not Spring Boot, so the
+OAuth2 authorization code flow stays visible rather than hidden behind framework config. README covers the
+front/back channel split and why oid rather than sub.
+
+entra-auth-demo - WIP ?
+Spring Boot as an OAuth2 resource server validating Entra bearer tokens, with mock-oauth2-server standing in
+for Entra
+
+
 ## Filters
 audit-filter
 Intercept incoming requests and pass to apache/activemq-artemis
