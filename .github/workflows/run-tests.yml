@@ -50,3 +50,26 @@ jobs:
           cd ..
 
 
+
+  Test-Node-Modules:
+    name: Test ${{ matrix.module }}
+    strategy:
+      matrix:
+        module: [ entra-node-login-demo ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ${{ matrix.module }}/package-lock.json
+
+      - name: Module tests
+        working-directory: ${{ matrix.module }}
+        run: |
+          npm ci
+          npm test

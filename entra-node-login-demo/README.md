@@ -3,20 +3,21 @@
 Sign in with Microsoft Entra and show who signed in. One button, one redirect, one page of claims.
 
 Node, not Spring Boot - deliberately, because it mirrors the prototype this was taken from and keeps
-the OAuth flow visible rather than hidden behind framework configuration. Three routes, 134 lines,
-two dependencies.
+the OAuth flow visible rather than hidden behind framework configuration. Three routes, three
+dependencies - the third being [jose](https://github.com/panva/jose), because verifying a JWT
+signature is the one step that should never be hand-rolled.
 
 ## What it does
 
 1. `/` - a page with a **Sign in with Microsoft Entra** button
 2. Cick on the sign in button and the browser is redirected to Entra
 3. ( Entra handles the registration of user and sign in and then redirects back to /auth/callback )
-4. /auth/callback` - the app receives a jwt that contains the user's **oid**, **name** and **email**
+4. `/auth/callback` - the app swaps the code for a JWT, verifies it, and reads the user's **oid**, **name** and **email**
 5. We display the contents of the jwt to the now signed in user
 
 ## Run it
 
-Node 20.6 or later. Everything but the secret is defaulted to the HMCTS sandbox tenant, so:
+Node 20.19 or later (jose is ESM-only and is loaded with `require`). Everything but the secret is defaulted to the HMCTS sandbox tenant, so:
 
 ```bash
 cd entra-node-login-demo
@@ -54,6 +55,10 @@ Every default can be overridden from the environment: `ENTRA_CLIENT_ID`, `ENTRA_
 `ENTRA_TOKEN_ENDPOINT`, `ENTRA_REDIRECT_URI`, `PORT`. The two endpoints come from the tenant's
 `/.well-known/openid-configuration`.
 
+That document's own address is derived from the token endpoint (`.../oauth2/v2.0/token` becomes
+`.../v2.0/.well-known/openid-configuration`), and `ENTRA_DISCOVERY_ENDPOINT` overrides it for a
+tenant laid out differently. The app reads the issuer and signing keys from it.
+
 ## What it logs
 
 Each route as it is hit, then the claims:
@@ -64,6 +69,7 @@ Each route as it is hit, then the claims:
 -> GET /auth/callback
    back from Entra  code=present  state=de349f5f...  error=none
    token exchange ok
+   id token verified
    claims  oid=11111111-2222-3333-4444-555555555555  name=Ada Lovelace  email=ada@example.net
 ```
 
@@ -83,8 +89,8 @@ sequenceDiagram
     participant E as Microsoft Entra
 
     B->>A: GET /auth/entra
-    A->>A: generate random state,<br/>set httpOnly cookie
-    A-->>B: 302 to Entra /authorize<br/>client_id, response_type=code,<br/>redirect_uri, scope, state
+    A->>A: generate random state and nonce,<br/>set httpOnly cookies
+    A-->>B: 302 to Entra /authorize<br/>client_id, response_type=code,<br/>redirect_uri, scope, state, nonce
 
     B->>E: GET /oauth2/v2.0/authorize
     Note over B,E: The user authenticates with Microsoft.<br/>This app sees none of it.
@@ -99,7 +105,8 @@ sequenceDiagram
     E-->>A: id_token (JWT)
     end
 
-    A->>A: decode the JWT payload<br/>-> oid, name, email
+    A->>E: GET discovery + keys (once, cached)
+    A->>A: verify signature, alg, iss, aud,<br/>exp, nonce -> oid, name, email
     A-->>B: the signed-in page
 ```
 
@@ -130,13 +137,17 @@ redeeming it also needs the client secret, which only the server has.
 
 ### `/auth/entra` - starting the flow
 
-Generates 16 random bytes as `state`, stores it in an `httpOnly` cookie, and redirects to the
-tenant's authorize endpoint with `client_id`, `response_type=code`, `redirect_uri`,
-`scope=openid profile email` and that `state`.
+Generates 16 random bytes each for `state` and `nonce`, stores both in `httpOnly` cookies, and
+redirects to the tenant's authorize endpoint with `client_id`, `response_type=code`, `redirect_uri`,
+`scope=openid profile email`, that `state` and that `nonce`.
 
 `state` is the CSRF defence for the round trip. Because the callback is a plain GET that anyone can
 navigate a victim's browser to, the cookie is what proves *this browser* started *this* flow. A
 callback whose `state` does not match the cookie is rejected.
+
+`nonce` does a different job. Entra copies it into the ID token, so it ties the token itself to this
+browser's sign-in. `state` protects the redirect; `nonce` protects the token, so a token from some
+other sign-in cannot be replayed into this one.
 
 `?prompt=login` is allow-listed for local demos: it makes Microsoft show its form even when the
 browser already has a session, which is otherwise why sign-in appears to "just work" with no way to
@@ -156,20 +167,40 @@ A server-side `POST` to the token endpoint with `grant_type=authorization_code`,
 the `redirect_uri` it was issued for, and the client secret. **This is where the JWT arrives** -
 `id_token` in the response body, over TLS, direct from Microsoft to the Node process.
 
-### Reading the claims
+### Verifying the token
 
-A JWT is three base64url segments separated by dots: `header.payload.signature`. The payload is
-`[1]`, decoded as JSON, yielding `oid`, `name`, and `email` - or `emails[0]`, because External ID
-returns an array in some configurations.
+A JWT is three base64url segments separated by dots: `header.payload.signature`. Anyone can decode
+the payload, and anyone can write one, so a decoded-but-unverified JWT is forgeable by anyone who can
+type base64. Only the signature makes a claim trustworthy.
 
-**This decodes but does not verify.** It never checks the signature against the tenant's public
-keys. The justification is narrow: the token came straight off a TLS connection to the token
-endpoint, authenticated with our own client secret, so nobody was in a position to substitute one.
+So before a single claim is read, `verifiedClaims` in `entra/client.js` checks:
 
-That reasoning holds *here and only here*. A decoded-but-unverified JWT is forgeable by anyone who
-can type base64 - the signature is the only thing that makes a claim trustworthy. If a token ever
-arrives from anywhere else, a browser or an API caller, it must be verified against the tenant's
-JWKS (`/discovery/v2.0/keys`) before a single claim is believed.
+| Check | Why |
+|---|---|
+| **signature** against the tenant's published keys, picked by the token's `kid` | only Entra holds the private key |
+| **`alg` is `RS256`**, from our allow-list, never from the token's own header | blocks `alg: none` and the HS256 key-confusion forgery |
+| **`iss`** is this tenant, as its discovery document names it | a token from another tenant is not ours |
+| **`aud`** is this app's client ID | a token issued to some other app is not for us |
+| **`exp` / `nbf`** are in date, with a minute of clock skew | old tokens expire |
+| **`nonce`** matches this browser's cookie | a token from another sign-in cannot be replayed |
+
+The issuer and the key-set address come from the tenant's discovery document, fetched once. That
+matters: on the sandbox tenant the issuer is `https://d44f885c-....ciamlogin.com/...`, not the
+`hmctsextsbox.ciamlogin.com` host the endpoints use, so a hard-coded guess would be wrong. jose
+caches the keys and refetches when a token names a `kid` it has not seen, which is what happens when
+Entra rotates them.
+
+Then the payload yields `oid`, `name` and `email`, or `emails[0]`, because External ID returns an
+array in some configurations.
+
+Strictly, the signature is belt and braces on this one path: the token came straight off a TLS
+connection to the token endpoint, authenticated with our own client secret, and OIDC Core 3.1.3.7
+allows that TLS connection to stand in for the signature. It is checked anyway. Once the keys are
+cached it costs nothing, and it means the same function is safe for a token from anywhere - a
+browser, an API caller - where that excuse does not apply.
+
+A token that fails any check gets a `401` and an "ID token rejected" page naming the reason, and none
+of its claims are shown.
 
 ## What `oid` is
 
@@ -195,29 +226,33 @@ differently for the same person.
 
 ## What a real integration must change
 
-This demo shows the flow. Two things are deliberately not production-shaped:
+This demo shows the flow. One thing is deliberately not production-shaped:
 
-1. **Verify the ID token signature** against the tenant's JWKS before trusting any claim. The
-   justification above is specific to this one call path and does not generalise.
-2. **Carry identity in a real session.** This demo renders the claims and forgets them, which is why
-   it needs no session at all. Anything that keeps a user signed in needs one - and it should hold
-   the `oid`, not the name or email.
+**Carry identity in a real session.** This demo renders the claims and forgets them, which is why it
+needs no session at all. Anything that keeps a user signed in needs one - and it should hold the
+`oid`, not the name or email.
 
-In Spring Boot, `spring-boot-starter-oauth2-client` does both of these for you, along with the
-`state` handling and the token exchange - see `entra-auth-demo` in this repo for the resource-server
+In Spring Boot, `spring-boot-starter-oauth2-client` does that for you, along with the `state` and
+`nonce` handling, the token exchange and the verification - see `entra-auth-demo` in this repo for the resource-server
 half. This demo hand-rolls them precisely so the steps are visible.
 
 ## The tests
 
 `npm test` uses Node's built-in test runner, with [supertest](https://github.com/ladjs/supertest) to
 drive the app. Entra is a stub HTTP server on an ephemeral port rather than a mocked `fetch`, so the
-real request in `entra/client.js` is exercised.
+real requests in `entra/client.js` - token, discovery and keys - are exercised. Its ID tokens are
+really signed, with an RSA key pair generated for each run.
 
-They cover the round trip as a browser performs it - start at `/auth/entra`, carry the cookie, come
-back with the code - and three refusals: a `state` that does not match the cookie, no cookie at all,
-and an `error` from Entra.
+They cover the round trip as a browser performs it - start at `/auth/entra`, carry the cookies, come
+back with the code - and three refusals of the callback: a `state` that does not match the cookie, no
+cookie at all, and an `error` from Entra.
 
-## Not in the CI matrix
+Then seven tokens that must not be believed, each failing exactly one check: signed by another key,
+unsigned (`alg: none`), signed with a shared secret (HS256), issued for another app, issued by
+another tenant, expired, and carrying another sign-in's nonce.
 
-`.github/workflows/run-tests.yml` runs `./gradlew clean test` in each module it lists. This module
-has no Gradle build, so adding it there would fail. It has no tests to run.
+## In CI
+
+`.github/workflows/run-tests.yml` runs `./gradlew clean test` for each Gradle module in its matrix.
+This module has no Gradle build, so it has its own `Test-Node-Modules` job, which runs `npm ci` and
+`npm test`.

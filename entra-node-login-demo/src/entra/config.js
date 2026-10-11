@@ -19,6 +19,12 @@ const config = {
   get clientSecret () { return process.env.ENTRA_CLIENT_SECRET },
   get authorizeEndpoint () { return process.env.ENTRA_AUTHORIZE_ENDPOINT || SANDBOX.authorizeEndpoint },
   get tokenEndpoint () { return process.env.ENTRA_TOKEN_ENDPOINT || SANDBOX.tokenEndpoint },
+  // Where the tenant publishes its issuer and signing keys. Derived from the token endpoint, since
+  // both hang off the same authority: https://<host>/<tenant>/oauth2/v2.0/token.
+  get discoveryEndpoint () {
+    return process.env.ENTRA_DISCOVERY_ENDPOINT ||
+      config.tokenEndpoint.replace(/\/oauth2\/v2\.0\/token$/, '/v2.0/.well-known/openid-configuration')
+  },
   get port () { return process.env.PORT || SANDBOX.port },
   get redirectUri () { return process.env.ENTRA_REDIRECT_URI || `http://localhost:${config.port}/auth/callback` },
   scope: 'openid profile email'

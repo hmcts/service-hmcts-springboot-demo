@@ -1,13 +1,14 @@
 // The Entra sign-in round trip.
 //
 //   GET /auth/entra      redirect the browser to Entra
-//   GET /auth/callback   Entra sends the browser back with a code; swap it for the ID token
+//   GET /auth/callback   Entra sends the browser back with a code; swap it for the ID token and verify it
 const crypto = require('node:crypto')
 const express = require('express')
-const { authorizeUrl, exchangeCodeForIdToken, claimsFrom } = require('../entra/client')
+const { authorizeUrl, exchangeCodeForIdToken, verifiedClaims } = require('../entra/client')
 const { escapeHtml, page } = require('../views/page')
 
 const STATE_COOKIE = 'entra_state'
+const NONCE_COOKIE = 'entra_nonce'
 
 const router = express.Router()
 
@@ -17,12 +18,16 @@ router.get('/auth/entra', (req, res) => {
   // cookie is what proves this browser is the one that started this flow.
   const state = crypto.randomBytes(16).toString('hex')
   res.cookie(STATE_COOKIE, state, { httpOnly: true, sameSite: 'lax' })
+  // Entra copies the nonce into the ID token, which ties that token to this browser's sign-in.
+  const nonce = crypto.randomBytes(16).toString('hex')
+  res.cookie(NONCE_COOKIE, nonce, { httpOnly: true, sameSite: 'lax' })
 
   console.log('   redirecting to Entra  state=%s  prompt=%s', short(state), req.query.prompt || 'none')
-  res.redirect(authorizeUrl(state, req.query.prompt))
+  res.redirect(authorizeUrl(state, nonce, req.query.prompt))
 })
 
 // Step 2. Entra sends the browser back with a code. Step 3. Swap it for the ID token, server to server.
+// Step 4. Verify the token before believing a word of it.
 router.get('/auth/callback', async (req, res) => {
   const { code, state, error, error_description: errorDescription } = req.query
 
@@ -41,15 +46,26 @@ router.get('/auth/callback', async (req, res) => {
     return res.status(400).send(page('State mismatch',
       '<p>Possible CSRF, or an expired or replayed link. Start again from the home page.</p>'))
   }
+  const nonce = req.cookies[NONCE_COOKIE]
   res.clearCookie(STATE_COOKIE)
+  res.clearCookie(NONCE_COOKIE)
 
-  let claims
+  let idToken
   try {
-    claims = claimsFrom(await exchangeCodeForIdToken(code))
+    idToken = await exchangeCodeForIdToken(code)
     console.log('   token exchange ok')
   } catch (err) {
     console.error('   token exchange failed: %s', err.message)
     return res.status(502).send(page('Token exchange failed', `<p class="detail">${escapeHtml(err.message)}</p>`))
+  }
+
+  let claims
+  try {
+    claims = await verifiedClaims(idToken, nonce)
+    console.log('   id token verified')
+  } catch (err) {
+    console.error('   id token rejected: %s', err.message)
+    return res.status(401).send(page('ID token rejected', `<p class="detail">${escapeHtml(err.message)}</p>`))
   }
 
   // The claims, and only the claims. The ID token itself is never logged.
