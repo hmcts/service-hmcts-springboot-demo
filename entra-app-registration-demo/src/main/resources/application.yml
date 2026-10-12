@@ -4,11 +4,21 @@ server:
 spring:
   application:
     name: entra-app-registration-demo
+  mvc:
+    problemdetails:
+      # RFC 7807 responses. Without this a ResponseStatusException answers with its status and nothing
+      # else, hiding the one thing these errors exist to say - which permission is missing, or which
+      # roles the API actually offers. server.error.include-message does not help: since Spring 6 the
+      # reason travels as ProblemDetail, not as the servlet error message.
+      enabled: true
 
 entra:
   tenant-id: ${ENTRA_TENANT_ID:d44f885c-4fac-47bf-afde-d7d861ec4d7b}
   onboarding-client-id: ${ENTRA_ONBOARDING_CLIENT_ID:8f867c90-73c7-437b-b9d7-bbfe04be8d4b}
   onboarding-client-secret: ${ENTRA_ONBOARDING_CLIENT_SECRET:}
+  # The API whose app roles a consumer gets assigned - hmcts-api-marketplace, the audience the
+  # APIM validate-jwt policies check.
+  api-client-id: ${ENTRA_API_CLIENT_ID:30288840-e345-4543-99ee-f9253d789339}
   graph-base-url: ${ENTRA_GRAPH_BASE_URL:https://graph.microsoft.com/v1.0}
   login-base-url: ${ENTRA_LOGIN_BASE_URL:https://login.microsoftonline.com}
   # Entra replication is very slow lets allow 10 secs

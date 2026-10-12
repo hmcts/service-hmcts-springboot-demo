@@ -14,15 +14,11 @@ the Azure SDK for the same reason.
 | | | |
 |---|---|---|
 | `GET` | `/applications` | every application this identity owns, oldest first |
+| `GET` | `/applications/{clientId}` | one application, and the API roles it holds |
+| `POST` | `/applications/{clientId}/roles` | let it call one of the platform's APIs |
+| `DELETE` | `/applications/{clientId}/roles/{role}` | take that away again |
 | `POST` | `/applications` | register one; answers with its Client ID and Secret |
-| `DELETE` | `/applications/{objectId}` | remove it, and with it the credentials |
-
-```bash
-curl -X POST localhost:8080/applications \
-  -H 'Content-Type: application/json' -d '{"name":"Team Alpha"}'
-
-curl -X DELETE localhost:8080/applications/<objectId>
-```
+| `DELETE` | `/applications/{clientId}` | remove it, and with it the credentials |
 
 ## The three Graph calls
 
@@ -68,13 +64,47 @@ export ENTRA_ONBOARDING_CLIENT_SECRET=...
 ./gradlew bootRun
 ```
 
-Then register one. This is the only moment the secret exists - Entra will not show it again:
+Every call, in the order you would make them. The rest of this README explains what each one does and
+why it behaves as it does.
 
 ```bash
-curl -s -X POST localhost:8080/applications \
-  -H 'Content-Type: application/json' \
-  -d '{"name":"colin-test"}'
+TENANT=d44f885c-4fac-47bf-afde-d7d861ec4d7b                  # hmctsextsbox
+API_CLIENT_ID=30288840-e345-4543-99ee-f9253d789339           # hmcts-api-marketplace
+
+# Create an application, keeping the client id and secret - this is the only time the secret exists
+read -r CLIENT_ID CLIENT_SECRET < <(curl -s -X POST localhost:8080/applications \
+  -H 'Content-Type: application/json' -d '{"name":"colin-test"}' \
+  | jq -r '"\(.clientId) \(.clientSecret)"')
+echo "ClientId:$CLIENT_ID ClientSecret:$CLIENT_SECRET"
+
+# List every application, oldest first
+curl -s localhost:8080/applications | jq .
+
+# See what roles one application holds - empty for a new one
+curl -s localhost:8080/applications/$CLIENT_ID | jq .
+
+# Get an Entra token with those credentials, and read its claims
+TOKEN=$(curl -s -X POST "https://login.microsoftonline.com/$TENANT/oauth2/v2.0/token" \
+  -d "client_id=$CLIENT_ID" --data-urlencode "client_secret=$CLIENT_SECRET" \
+  -d "scope=$API_CLIENT_ID/.default" -d "grant_type=client_credentials" | jq -r .access_token)
+echo "$TOKEN" | jq -R 'split(".")[1] | @base64d | fromjson | {aud, roles, azp}'
+
+# Assign a role, so APIM will accept that token
+curl -i -X POST localhost:8080/applications/$CLIENT_ID/roles \
+  -H 'Content-Type: application/json' -d '{"role":"slc.read"}'
+
+# Take the role away again
+curl -i -X DELETE localhost:8080/applications/$CLIENT_ID/roles/slc.read
+
+# Delete the application, and its service principal with it
+curl -i -X DELETE localhost:8080/applications/$CLIENT_ID
 ```
+
+These are real writes to the `hmctsextsbox` tenant, so tidy up after a try - what you leave behind
+shows in the Entra portal under App registrations.
+
+
+Registering one answers with the only copy of the secret there will ever be:
 
 ```json
 {
@@ -88,12 +118,7 @@ curl -s -X POST localhost:8080/applications \
 Both ids come back for a reason: `clientId` is what a subscriber authenticates with, `objectId` is how
 the application is addressed again afterwards. Keep it, or you cannot remove what you just made.
 
-List what is there, to find what is worth removing. Oldest first, and never with a secret - Entra
-cannot give one back:
-
-```bash
-curl -s localhost:8080/applications
-```
+Listing shows what is there, oldest first, and never with a secret - Entra cannot give one back:
 
 ```json
 [
@@ -107,17 +132,7 @@ supported for 'Application'"* unless the request opts into advanced queries. A m
 you that - it serves whatever you stub, which is how this passed its tests and then 500'd against the
 real tenant.
 
-```bash
-curl -i -X DELETE localhost:8080/applications/7c1d9f2e-4b58-4a31-9f0c-2e6d8a1b3c44
-```
-
-```
-HTTP/1.1 204 No Content
-```
-
-Deleting the application removes its service principal with it. These are real writes to the
-`hmctsextsbox` tenant, so tidy up after a try - what you leave behind shows in the Entra portal under
-App registrations.
+Deleting an application answers `204`, and removes its service principal with it.
 
 
 The secret is the only setting with no default, so it is the only one that can be missing. It is
@@ -166,31 +181,48 @@ Without the credential it answers `503` rather than failing at the first Graph c
 The Client ID and Secret are what a subscriber authenticates with. They work immediately, because the
 service principal was created alongside them:
 
-Take them straight off the registration:
-
-```bash
-read -r CLIENT_ID CLIENT_SECRET < <(curl -s -X POST localhost:8080/applications \
-  -H 'Content-Type: application/json' -d '{"name":"colin-test"}' \
-  | jq -r '"\(.clientId) \(.clientSecret)"')
-echo "ClientId:$CLIENT_ID ClientSecret:$CLIENT_SECRET"
-```
-
-```bash
-echo "ClientId:$CLIENT_ID ClientSecret:$CLIENT_SECRET"
-curl -s -X POST "https://login.microsoftonline.com/d44f885c-4fac-47bf-afde-d7d861ec4d7b/oauth2/v2.0/token" \
-  -d "client_id=$CLIENT_ID" \
-  --data-urlencode "client_secret=$CLIENT_SECRET" \
-  -d "scope=https://graph.microsoft.com/.default" \
-  -d "grant_type=client_credentials"
-```
-
-`--data-urlencode` on the secret, not `-d`: Entra secrets contain `~`, `.` and sometimes `+` or `=`,
-and an unencoded one is silently mangled into `AADSTS7000215: Invalid client secret provided`.
-
-That returns a token - but look at what is in it:
+That returns an `access_token`, which is a JWT - three dot-separated parts, only the middle one
+worth reading:
 
 ```
-aud=https://graph.microsoft.com   roles=(none)
+eyJ0eXAiOiJKV1QiLCJub25jZSI6Ik...   header
+eyJhdWQiOiJodHRwczovL2dyYXBoLm...   claims     <- this one
+cTftAhBDT4G4-jDibUkAGCjw0mOFy_...   signature
+```
+
+The decode above is worth unpacking:
+
+| | |
+|---|---|
+| `-R` | read the token as a raw string, not as JSON |
+| `split(".")[1]` | take the middle part, the claims |
+| `@base64d` | decode it - this is base64**url**, which `base64 -d` mangles |
+| `fromjson` | parse the result, so you can pick fields out of it |
+
+An empty `$TOKEN`, or `jq: error ... Malformed BOM`, means the token request failed rather than the
+decode. Drop the `| jq -r .access_token` and read what Entra actually said. The usual causes are a
+variable unset because you are in a different terminal, or a secret created seconds ago that has not
+replicated yet - which Entra reports as `invalid_client`, indistinguishable from a wrong one.
+
+A newly registered application gets back this:
+
+```json
+{ "aud": "30288840-e345-4543-99ee-f9253d789339", "roles": null, "azp": "<the client id>" }
+```
+
+`azp` ("authorized party") names the calling application. Its v1.0 equivalent is `appid`, which is
+absent here - these are v2.0 tokens (`"ver": "2.0"`), so asking for `appid` always gives `null`.
+
+**`aud`** is who the token is *for*. A JWT is not a general pass - it names its intended recipient,
+and the slc policy rejects anything whose audience is not the marketplace API. Ask for
+`scope=https://graph.microsoft.com/.default` and you get a perfectly valid token that APIM will
+refuse, because it was minted for Graph.
+
+**`roles`** is what the bearer may do there, and it is empty until the application is assigned an app
+role. The same decode on the onboarding identity's own token shows what a populated one looks like:
+
+```json
+{ "aud": "https://graph.microsoft.com", "roles": ["Application.ReadWrite.OwnedBy"] }
 ```
 
 **Authenticated, but authorised for nothing.** Use it and Graph says so:
@@ -218,6 +250,65 @@ So a complete journey needs three things this demo does not do:
 
 Step 2 needs the Graph permission `AppRoleAssignment.ReadWrite.All`, which the onboarding identity
 does not hold - see below.
+
+## Assigning app roles, so a consumer can call an API
+
+The credentials above authenticate but authorise nothing. What APIM's `validate-jwt` policies check
+for is a **`roles` claim**, and a freshly registered application has none:
+
+```json
+{ "objectId": "...", "clientId": "...", "displayName": "colin-test", "roles": [] }
+```
+
+That empty list is why its token is rejected at the gateway. Granting a role fills it:
+
+```json
+{ "objectId": "...", "clientId": "...", "displayName": "colin-test", "roles": ["slc.read"] }
+```
+
+A `DELETE` on the same path takes it away again.
+
+Nothing in APIM changes at any point. The policy already requires the role; the consumer's next token
+simply carries it. That is the point of modelling access as app roles rather than listing client IDs
+in policy XML - onboarding a consumer never touches the gateway.
+
+The role is assigned **on the API's service principal**, naming the consumer as `principalId`:
+
+```
+POST /servicePrincipals/{api-sp}/appRoleAssignedTo
+  { principalId: <consumer sp>, resourceId: <api sp>, appRoleId: <the role> }
+```
+
+Easy to get backwards - the assignment lives on the resource, not on the caller. Revoking deletes that
+same assignment, which is why the read and the revoke share a lookup.
+
+Graph answers with the role's **id**, not its name, so the names are resolved against the API's own
+`appRoles`. The read needs no permission beyond what the onboarding identity already has, so it works
+today even though the grant and the revoke do not.
+
+The API is `hmcts-api-marketplace` (`ENTRA_API_CLIENT_ID`), which already defines `slc.read` and
+`app.read`, both `Application` type - the right kind for `client_credentials`, where there is no user
+and so no delegated scopes.
+
+**The grant and revoke do not work yet.** They need the Graph permission
+`AppRoleAssignment.ReadWrite.All`, and no principal in `hmctsextsbox` holds it - not
+`amp-client-onboarding-prototype`, not the governed `amp-client-onboarding`, nothing. Until consent is
+granted they answer `500` naming the permission, which is the honest behaviour and the thing to show
+whoever reviews the request:
+
+```json
+{ "status": 500, "title": "Internal Server Error",
+  "detail": "Graph refused the app role assignment. The onboarding identity needs the
+             AppRoleAssignment.ReadWrite.All application permission." }
+```
+
+`500` rather than `503`: nothing here is temporary, and a `503` invites a client to retry forever
+against something only a consent grant will fix. Graph's own `403` is about *this service's* identity,
+not the caller's, so passing it through would wrongly blame their credentials.
+
+That detail only appears because `spring.mvc.problemdetails.enabled` is on. Since Spring 6 a
+`ResponseStatusException`'s reason travels as RFC 7807, so without it the response carries a bare
+`503` and the message is lost - `server.error.include-message` does not bring it back.
 
 ## What permissions the onboarding identity needs
 
