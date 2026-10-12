@@ -41,8 +41,8 @@ before(async () => {
   const tokenEndpoint = `http://localhost:${entra.address().port}/token`
 
   // Set before the app is required: src/entra/config.js reads the environment once, on load.
-  process.env.ENTRA_CLIENT_ID = 'demo-client'
-  process.env.ENTRA_CLIENT_SECRET = 'demo-secret'
+  process.env.ENTRA_SIGNIN_CLIENT_ID = 'demo-client'
+  process.env.ENTRA_SIGNIN_CLIENT_SECRET = 'demo-secret'
   process.env.ENTRA_REDIRECT_URI = 'http://localhost:3000/auth/callback'
   process.env.ENTRA_AUTHORIZE_ENDPOINT = 'https://login.example/authorize'
   process.env.ENTRA_TOKEN_ENDPOINT = tokenEndpoint
@@ -113,12 +113,12 @@ describe('entra sign-in', () => {
 
 describe('configuration', () => {
   test('a_missing_setting_should_name_itself_rather_than_fail_later', () => {
-    const secret = process.env.ENTRA_CLIENT_SECRET
-    delete process.env.ENTRA_CLIENT_SECRET
+    const secret = process.env.ENTRA_SIGNIN_CLIENT_SECRET
+    delete process.env.ENTRA_SIGNIN_CLIENT_SECRET
     try {
-      assert.throws(() => assertConfigured(), /ENTRA_CLIENT_SECRET/)
+      assert.throws(() => assertConfigured(), /ENTRA_SIGNIN_CLIENT_SECRET/)
     } finally {
-      process.env.ENTRA_CLIENT_SECRET = secret
+      process.env.ENTRA_SIGNIN_CLIENT_SECRET = secret
     }
   })
 

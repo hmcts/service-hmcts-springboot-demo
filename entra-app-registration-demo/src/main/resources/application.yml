@@ -1,0 +1,16 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  application:
+    name: entra-app-registration-demo
+
+entra:
+  # The hmctsextsbox CIAM tenant. Not a credential, and the same for every deploy.
+  tenant-id: ${ENTRA_TENANT_ID:d44f885c-4fac-47bf-afde-d7d861ec4d7b}
+  # The amp-client-onboarding-prototype identity, which holds the one Graph permission these calls need:
+  # Application.ReadWrite.OwnedBy. A public identifier, so it defaults; its secret never can.
+  onboarding-client-id: ${ENTRA_ONBOARDING_CLIENT_ID:8f867c90-73c7-437b-b9d7-bbfe04be8d4b}
+  onboarding-client-secret: ${ENTRA_ONBOARDING_CLIENT_SECRET:}
+  graph-base-url: ${ENTRA_GRAPH_BASE_URL:https://graph.microsoft.com/v1.0}
+  login-base-url: ${ENTRA_LOGIN_BASE_URL:https://login.microsoftonline.com}

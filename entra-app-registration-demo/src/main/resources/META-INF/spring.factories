@@ -1,0 +1,2 @@
+org.springframework.boot.diagnostics.FailureAnalyzer=\
+  uk.gov.hmcts.amp.entraapp.config.MissingOnboardingSecretFailureAnalyzer

@@ -12,6 +12,7 @@ jobs:
       matrix:
         module: [ actuator-demo,
                   apim-subscription-key-demo,
+                  entra-app-registration-demo,
                   controller-demo,
                   flyway-java-migration-demo,
                   audit-filter-demo,

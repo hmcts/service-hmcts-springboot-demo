@@ -50,6 +50,10 @@ Sign in with Microsoft Entra and show the user's oid, name and email. A tiny Nod
 OAuth2 authorization code flow stays visible rather than hidden behind framework config. README covers the
 front/back channel split and why oid rather than sub.
 
+entra-app-registration-demo
+Registers an Entra application through Microsoft Graph and returns a Client ID and Client Secret for a subscriber.
+Three Graph calls, with the retry the real directory needs. The backend half of what entra-node-login-demo starts.
+
 entra-auth-demo - WIP ?
 Spring Boot as an OAuth2 resource server validating Entra bearer tokens, with mock-oauth2-server standing in
 for Entra
