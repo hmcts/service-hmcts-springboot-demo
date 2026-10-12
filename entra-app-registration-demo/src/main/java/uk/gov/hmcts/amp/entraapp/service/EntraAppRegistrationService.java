@@ -43,7 +43,8 @@ import static java.util.Comparator.nullsLast;
 @RequiredArgsConstructor
 public class EntraAppRegistrationService {
 
-    public record Registration(String objectId, String clientId, String clientSecret, String keyId) {
+    public record Registration(String objectId, String clientId, String clientSecret, String keyId,
+                               List<String> roles) {
     }
 
     public record Summary(String objectId, String clientId, String displayName, OffsetDateTime created) {
@@ -62,6 +63,15 @@ public class EntraAppRegistrationService {
 
 
     public Registration register(final String applicationName) {
+        return register(applicationName, List.of());
+    }
+
+    /**
+     * Registers an application and grants it the APIs it needs, in one act. Anything that fails after
+     * the application exists takes it away again - including a role that cannot be granted, because a
+     * registration whose secret was shown but whose access was never set up is worse than none.
+     */
+    public Registration register(final String applicationName, final List<String> roles) {
         Application created = createApplication(applicationName);
         String objectId = created.getId();
         String clientId = created.getAppId();
@@ -72,8 +82,11 @@ public class EntraAppRegistrationService {
             withRetry("create service principal", () -> createServicePrincipal(clientId));
             PasswordCredential secret = withRetry("add password", () -> addPassword(objectId));
 
-            log.info("Registered Entra application {} for '{}'", clientId, applicationName);
-            return new Registration(objectId, clientId, secret.getSecretText(), String.valueOf(secret.getKeyId()));
+            roles.forEach(role -> grantApiAccess(clientId, role));
+
+            log.info("Registered Entra application {} for '{}' with roles {}", clientId, applicationName, roles);
+            return new Registration(objectId, clientId, secret.getSecretText(),
+                    String.valueOf(secret.getKeyId()), roles);
         } catch (final RuntimeException registrationFailed) {
             removeOrphan(objectId, registrationFailed);
             throw registrationFailed;
@@ -120,12 +133,16 @@ public class EntraAppRegistrationService {
     }
 
     private String servicePrincipalObjectId(final String appId, final String notFound) {
-        ServicePrincipalCollectionResponse found = graph.servicePrincipals().get(request ->
-                request.queryParameters.filter = "appId eq '" + appId + "'");
-        if (found == null || found.getValue() == null || found.getValue().isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, notFound);
-        }
-        return found.getValue().getFirst().getId();
+        // Retried: when this runs straight after registering, the service principal is seconds old and
+        // the replica this reads may not have it yet.
+        return withRetry("find service principal " + appId, () -> {
+            ServicePrincipalCollectionResponse found = graph.servicePrincipals().get(request ->
+                    request.queryParameters.filter = "appId eq '" + appId + "'");
+            if (found == null || found.getValue() == null || found.getValue().isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, notFound);
+            }
+            return found.getValue().getFirst().getId();
+        });
     }
 
     private UUID appRoleId(final String apiPrincipalId, final String roleValue) {

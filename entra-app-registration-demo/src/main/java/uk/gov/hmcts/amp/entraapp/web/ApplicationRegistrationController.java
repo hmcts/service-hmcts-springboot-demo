@@ -23,7 +23,12 @@ import java.util.List;
 @RequestMapping("/applications")
 public class ApplicationRegistrationController {
 
-    public record NewApplication(@NotBlank String name) {
+    /** {@code roles} is optional - without it the application is registered but can call nothing. */
+    public record NewApplication(@NotBlank String name, List<String> roles) {
+
+        public NewApplication {
+            roles = roles == null ? List.of() : roles;
+        }
     }
 
     public record ApiAccess(@NotBlank String role) {
@@ -35,8 +40,8 @@ public class ApplicationRegistrationController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public EntraAppRegistrationService.Registration register(@Valid @RequestBody final NewApplication request) {
-        log.info("Registering application named:{}", request.name());
-        return registrations.register(request.name());
+        log.info("Registering application named:{} with roles:{}", request.name(), request.roles());
+        return registrations.register(request.name(), request.roles());
     }
 
     @GetMapping
