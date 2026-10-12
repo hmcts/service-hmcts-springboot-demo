@@ -24,13 +24,9 @@ import static java.util.Comparator.nullsLast;
 /**
  * Registers a Microsoft Entra application and hands back credentials a subscriber can use. Three Graph
  * calls, in this order:
- *
- * <pre>
  *   applications().post(..)                       the registration. Carries id (object id) and appId (client id)
- *   servicePrincipals().post(..)                  the identity in the tenant, without which the credentials
- *                                                 cannot get a token at all
+ *   servicePrincipals().post(..)                  the identity in the tenant, so we can get a token
  *   applications().byApplicationId(id).addPassword()   the secret, returned once and never again
- * </pre>
  */
 @Slf4j
 @Service
