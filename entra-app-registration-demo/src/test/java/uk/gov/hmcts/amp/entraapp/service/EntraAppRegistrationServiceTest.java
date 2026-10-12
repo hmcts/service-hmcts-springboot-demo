@@ -7,6 +7,7 @@ import com.microsoft.graph.serviceclient.GraphServiceClient;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 import uk.gov.hmcts.amp.entraapp.config.EntraProperties;
 import reactor.core.publisher.Mono;
@@ -29,6 +30,7 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMoc
 import static com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.InstanceOfAssertFactories.throwable;
 
 /** The real Graph SDK against a mock Entra, so the calls it makes are visible. */
 class EntraAppRegistrationServiceTest {
@@ -37,6 +39,10 @@ class EntraAppRegistrationServiceTest {
     private static final String CLIENT_ID = "22222222-2222-2222-2222-222222222222";
     private static final String KEY_ID = "33333333-3333-3333-3333-333333333333";
     private static final int ATTEMPTS = 4;
+    private static final String API_CLIENT_ID = "99999999-9999-9999-9999-999999999999";
+    private static final String API_SP_ID = "44444444-4444-4444-4444-444444444444";
+    private static final String CONSUMER_SP_ID = "55555555-5555-5555-5555-555555555555";
+    private static final String ROLE_ID = "66666666-6666-6666-6666-666666666666";
 
     private WireMockServer mockEntra;
     private EntraAppRegistrationService client;
@@ -53,7 +59,7 @@ class EntraAppRegistrationServiceTest {
         sdk.getRequestAdapter().setBaseUrl(mockEntra.baseUrl());
 
         client = new EntraAppRegistrationService(sdk, new EntraProperties(
-                "a-tenant", "an-onboarding-app", "a-secret", mockEntra.baseUrl(), mockEntra.baseUrl(),
+                "a-tenant", "an-onboarding-app", "a-secret", mockEntra.baseUrl(), mockEntra.baseUrl(), API_CLIENT_ID,
                 ATTEMPTS, 1));
     }
 
@@ -117,6 +123,63 @@ class EntraAppRegistrationServiceTest {
     }
 
     @Test
+    void registering_with_roles_should_grant_them_in_the_same_call() {
+        SubscriptionStubs.registration(mockEntra, OBJECT_ID, CLIENT_ID, KEY_ID);
+        stubServicePrincipalLookups();
+        stubApiRoles();
+        mockEntra.stubFor(post(urlPathEqualTo("/servicePrincipals/" + API_SP_ID + "/appRoleAssignedTo"))
+                .willReturn(json("{\"id\":\"assignment-1\"}")));
+
+        EntraAppRegistrationService.Registration registration =
+                client.register("Team Alpha", List.of("slc.read"));
+
+        assertThat(registration.roles()).containsExactly("slc.read");
+        mockEntra.verify(postRequestedFor(urlPathEqualTo("/servicePrincipals/" + API_SP_ID + "/appRoleAssignedTo")));
+    }
+
+    @Test
+    void a_service_principal_not_yet_replicated_should_be_waited_for_rather_than_failing() {
+        SubscriptionStubs.registration(mockEntra, OBJECT_ID, CLIENT_ID, KEY_ID);
+        stubApiRoles();
+        mockEntra.stubFor(get(urlPathEqualTo("/servicePrincipals"))
+                .withQueryParam("$filter", equalTo("appId eq '" + API_CLIENT_ID + "'"))
+                .willReturn(json("{\"value\":[{\"id\":\"" + API_SP_ID + "\"}]}")));
+        // The consumer's own principal was made seconds ago: the first read misses it.
+        mockEntra.stubFor(get(urlPathEqualTo("/servicePrincipals"))
+                .withQueryParam("$filter", equalTo("appId eq '" + CLIENT_ID + "'"))
+                .inScenario("replication").whenScenarioStateIs(STARTED)
+                .willReturn(json("{\"value\":[]}"))
+                .willSetStateTo("replicated"));
+        mockEntra.stubFor(get(urlPathEqualTo("/servicePrincipals"))
+                .withQueryParam("$filter", equalTo("appId eq '" + CLIENT_ID + "'"))
+                .inScenario("replication").whenScenarioStateIs("replicated")
+                .willReturn(json("{\"value\":[{\"id\":\"" + CONSUMER_SP_ID + "\"}]}")));
+        mockEntra.stubFor(post(urlPathEqualTo("/servicePrincipals/" + API_SP_ID + "/appRoleAssignedTo"))
+                .willReturn(json("{\"id\":\"assignment-1\"}")));
+
+        EntraAppRegistrationService.Registration registration =
+                client.register("Team Alpha", List.of("slc.read"));
+
+        assertThat(registration.roles()).containsExactly("slc.read");
+    }
+
+    @Test
+    void a_role_that_cannot_be_granted_should_take_the_new_application_away_again() {
+        SubscriptionStubs.registration(mockEntra, OBJECT_ID, CLIENT_ID, KEY_ID);
+        stubServicePrincipalLookups();
+        stubApiRoles();
+        mockEntra.stubFor(post(urlPathEqualTo("/servicePrincipals/" + API_SP_ID + "/appRoleAssignedTo"))
+                .willReturn(aResponse().withStatus(403)));
+        mockEntra.stubFor(delete(urlPathMatching("/applications/.*")).willReturn(aResponse().withStatus(204)));
+
+        assertThatThrownBy(() -> client.register("Team Alpha", List.of("slc.read")))
+                .isInstanceOf(ResponseStatusException.class);
+
+        // A registration whose secret was shown but whose access failed is worse than none.
+        mockEntra.verify(deleteRequestedFor(urlPathEqualTo("/applications/" + OBJECT_ID)));
+    }
+
+    @Test
     void a_registration_that_fails_after_the_application_exists_should_not_leave_it_behind() {
         stubCreateApplication();
         mockEntra.stubFor(post(urlPathEqualTo("/servicePrincipals")).willReturn(aResponse().withStatus(404)));
@@ -174,12 +237,138 @@ class EntraAppRegistrationServiceTest {
     }
 
     @Test
-    void deleting_an_application_should_address_it_by_object_id() {
+    void granting_api_access_should_assign_the_role_on_the_apis_service_principal() {
+        stubServicePrincipalLookups();
+        stubApiRoles();
+        mockEntra.stubFor(post(urlPathEqualTo("/servicePrincipals/" + API_SP_ID + "/appRoleAssignedTo"))
+                .willReturn(json("{\"id\":\"assignment-1\"}")));
+
+        client.grantApiAccess(CLIENT_ID, "slc.read");
+
+        // Assigned on the API's principal, naming the consumer as principalId - not the other way round.
+        mockEntra.verify(postRequestedFor(urlPathEqualTo("/servicePrincipals/" + API_SP_ID + "/appRoleAssignedTo"))
+                .withRequestBody(equalToJson("""
+                        {"principalId":"%s","resourceId":"%s","appRoleId":"%s"}"""
+                        .formatted(CONSUMER_SP_ID, API_SP_ID, ROLE_ID), true, true)));
+    }
+
+    @Test
+    void a_role_the_api_does_not_offer_should_say_what_it_does_offer() {
+        stubServicePrincipalLookups();
+        stubApiRoles();
+
+        assertThatThrownBy(() -> client.grantApiAccess(CLIENT_ID, "nonsense.read"))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("slc.read");
+    }
+
+    @Test
+    void a_refused_assignment_should_name_the_permission_that_is_missing() {
+        stubServicePrincipalLookups();
+        stubApiRoles();
+        mockEntra.stubFor(post(urlPathEqualTo("/servicePrincipals/" + API_SP_ID + "/appRoleAssignedTo"))
+                .willReturn(aResponse().withStatus(403)));
+
+        assertThatThrownBy(() -> client.grantApiAccess(CLIENT_ID, "slc.read"))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("AppRoleAssignment.ReadWrite.All")
+                // Not 503: a missing consent grant is not temporary, and 503 invites endless retrying.
+                .asInstanceOf(throwable(ResponseStatusException.class))
+                .extracting(ResponseStatusException::getStatusCode)
+                .isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    private void stubServicePrincipalLookups() {
+        mockEntra.stubFor(get(urlPathEqualTo("/servicePrincipals"))
+                .withQueryParam("$filter", equalTo("appId eq '" + CLIENT_ID + "'"))
+                .willReturn(json("{\"value\":[{\"id\":\"" + CONSUMER_SP_ID + "\"}]}")));
+        mockEntra.stubFor(get(urlPathEqualTo("/servicePrincipals"))
+                .withQueryParam("$filter", equalTo("appId eq '" + API_CLIENT_ID + "'"))
+                .willReturn(json("{\"value\":[{\"id\":\"" + API_SP_ID + "\"}]}")));
+    }
+
+    @Test
+    void deleting_an_application_should_find_its_object_id_from_the_client_id() {
+        stubApplicationList();
+        stubServicePrincipalLookups();
+        stubApiRoles();
+        mockEntra.stubFor(get(urlPathEqualTo("/servicePrincipals/" + CONSUMER_SP_ID + "/appRoleAssignments"))
+                .willReturn(json("{\"value\":[]}")));
         mockEntra.stubFor(delete(urlPathMatching("/applications/.*")).willReturn(aResponse().withStatus(204)));
 
-        client.delete(OBJECT_ID);
+        client.delete(CLIENT_ID);
 
+        // The caller names the client id; Graph needs the object id, which is looked up rather than asked for.
         mockEntra.verify(deleteRequestedFor(urlPathEqualTo("/applications/" + OBJECT_ID)));
+    }
+
+    @Test
+    void reading_one_application_should_name_the_roles_it_holds() {
+        stubApplicationList();
+        stubServicePrincipalLookups();
+        stubApiRoles();
+        mockEntra.stubFor(get(urlPathEqualTo("/servicePrincipals/" + CONSUMER_SP_ID + "/appRoleAssignments"))
+                .willReturn(json("""
+                        {"value":[{"id":"assign-1","appRoleId":"%s"}]}""".formatted(ROLE_ID))));
+
+        EntraAppRegistrationService.Detail detail = client.get(CLIENT_ID);
+
+        // Graph answers with the role's id; the caller wants its name.
+        assertThat(detail.roles()).containsExactly("slc.read");
+        assertThat(detail.clientId()).isEqualTo(CLIENT_ID);
+    }
+
+    @Test
+    void revoking_a_role_should_delete_the_assignment_on_the_apis_principal() {
+        stubServicePrincipalLookups();
+        stubApiRoles();
+        mockEntra.stubFor(get(urlPathEqualTo("/servicePrincipals/" + CONSUMER_SP_ID + "/appRoleAssignments"))
+                .willReturn(json("""
+                        {"value":[{"id":"assign-1","appRoleId":"%s"}]}""".formatted(ROLE_ID))));
+        mockEntra.stubFor(delete(urlPathMatching("/servicePrincipals/.*/appRoleAssignedTo/.*"))
+                .willReturn(aResponse().withStatus(204)));
+
+        client.revokeApiAccess(CLIENT_ID, "slc.read");
+
+        mockEntra.verify(deleteRequestedFor(
+                urlPathEqualTo("/servicePrincipals/" + API_SP_ID + "/appRoleAssignedTo/assign-1")));
+    }
+
+    @Test
+    void revoking_a_role_the_application_does_not_hold_should_be_not_found() {
+        stubServicePrincipalLookups();
+        stubApiRoles();
+        mockEntra.stubFor(get(urlPathEqualTo("/servicePrincipals/" + CONSUMER_SP_ID + "/appRoleAssignments"))
+                .willReturn(json("{\"value\":[]}")));
+
+        assertThatThrownBy(() -> client.revokeApiAccess(CLIENT_ID, "slc.read"))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("does not hold slc.read");
+    }
+
+    private static final class SubscriptionStubs {
+        static void registration(final com.github.tomakehurst.wiremock.WireMockServer mock,
+                                 final String objectId, final String clientId, final String keyId) {
+            mock.stubFor(post(urlPathEqualTo("/applications")).willReturn(aResponse().withStatus(200)
+                    .withHeader("Content-Type", "application/json")
+                    .withBody("{\"id\":\"" + objectId + "\",\"appId\":\"" + clientId + "\"}")));
+            mock.stubFor(post(urlPathEqualTo("/servicePrincipals")).willReturn(aResponse().withStatus(200)
+                    .withHeader("Content-Type", "application/json").withBody("{\"id\":\"sp-1\"}")));
+            mock.stubFor(post(urlPathEqualTo("/applications/" + objectId + "/addPassword"))
+                    .willReturn(aResponse().withStatus(200).withHeader("Content-Type", "application/json")
+                            .withBody("{\"keyId\":\"" + keyId + "\",\"secretText\":\"the-secret-shown-once\"}")));
+        }
+    }
+
+    private void stubApplicationList() {
+        mockEntra.stubFor(get(urlPathEqualTo("/applications")).willReturn(json("""
+                {"value":[{"id":"%s","appId":"%s","displayName":"Team Alpha"}]}"""
+                .formatted(OBJECT_ID, CLIENT_ID))));
+    }
+
+    private void stubApiRoles() {
+        mockEntra.stubFor(get(urlPathEqualTo("/servicePrincipals/" + API_SP_ID)).willReturn(json("""
+                {"id":"%s","appRoles":[{"id":"%s","value":"slc.read"}]}""".formatted(API_SP_ID, ROLE_ID))));
     }
 
     private void stubCreateApplication() {
