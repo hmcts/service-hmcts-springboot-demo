@@ -64,39 +64,46 @@ export ENTRA_ONBOARDING_CLIENT_SECRET=...
 ./gradlew bootRun
 ```
 
-Every call, in the order you would make them. The rest of this README explains what each one does and
-why it behaves as it does.
 
 ```bash
-TENANT=d44f885c-4fac-47bf-afde-d7d861ec4d7b                  # hmctsextsbox
-API_CLIENT_ID=30288840-e345-4543-99ee-f9253d789339           # hmcts-api-marketplace
 
-# Create an application, keeping the client id and secret - this is the only time the secret exists
+# Create an application and store the client id for use in future curl commands
+# This is the only time the secret exists - Entra will not show it again
 read -r CLIENT_ID CLIENT_SECRET < <(curl -s -X POST localhost:8080/applications \
-  -H 'Content-Type: application/json' -d '{"name":"colin-test"}' \
+  -H 'Content-Type: application/json' -d '{"name":"colin-test2"}' \
   | jq -r '"\(.clientId) \(.clientSecret)"')
 echo "ClientId:$CLIENT_ID ClientSecret:$CLIENT_SECRET"
 
-# List every application, oldest first
+# List all applications, oldest first
 curl -s localhost:8080/applications | jq .
 
-# See what roles one application holds - empty for a new one
+# To see what roles are assigned to an application - empty for a new one
 curl -s localhost:8080/applications/$CLIENT_ID | jq .
 
-# Get an Entra token with those credentials, and read its claims
+# Use the previously created application to get an Entra token to use with an API
+TENANT=d44f885c-4fac-47bf-afde-d7d861ec4d7b                 # hmctsextsbox
+API_CLIENT_ID=30288840-e345-4543-99ee-f9253d789339           # hmcts-api-marketplace
 TOKEN=$(curl -s -X POST "https://login.microsoftonline.com/$TENANT/oauth2/v2.0/token" \
   -d "client_id=$CLIENT_ID" --data-urlencode "client_secret=$CLIENT_SECRET" \
   -d "scope=$API_CLIENT_ID/.default" -d "grant_type=client_credentials" | jq -r .access_token)
+
+# Decode the token to see its claims - aud is the API it is for, roles what it may do there
 echo "$TOKEN" | jq -R 'split(".")[1] | @base64d | fromjson | {aud, roles, azp}'
 
-# Assign a role, so APIM will accept that token
+# Assign a role to an application, so APIM will accept its token
 curl -i -X POST localhost:8080/applications/$CLIENT_ID/roles \
   -H 'Content-Type: application/json' -d '{"role":"slc.read"}'
 
-# Take the role away again
+# Take a role away from an application
 curl -i -X DELETE localhost:8080/applications/$CLIENT_ID/roles/slc.read
 
-# Delete the application, and its service principal with it
+# Call the slc API through sbox APIM with that token
+# Needs BOTH: the JWT for validate-jwt, and a subscription key because the product requires one
+curl -i "https://sps-api-mgmt.sandbox.api.hmcts.net/amp/slc/case/$CASE_URN/courtschedule" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Ocp-Apim-Subscription-Key: $SUBSCRIPTION_KEY"
+
+# Delete an application by clientId - its service principal goes with it
 curl -i -X DELETE localhost:8080/applications/$CLIENT_ID
 ```
 
@@ -290,11 +297,17 @@ The API is `hmcts-api-marketplace` (`ENTRA_API_CLIENT_ID`), which already define
 `app.read`, both `Application` type - the right kind for `client_credentials`, where there is no user
 and so no delegated scopes.
 
-**The grant and revoke do not work yet.** They need the Graph permission
-`AppRoleAssignment.ReadWrite.All`, and no principal in `hmctsextsbox` holds it - not
-`amp-client-onboarding-prototype`, not the governed `amp-client-onboarding`, nothing. Until consent is
-granted they answer `500` naming the permission, which is the honest behaviour and the thing to show
-whoever reviews the request:
+Both are **verified against the real tenant**. They need two Graph permissions, and which identity you
+run as decides whether they succeed:
+
+| Identity | `Application.ReadWrite.OwnedBy` | `AppRoleAssignment.ReadWrite.All` | |
+|---|---|---|---|
+| `amp-client-onboarding` | yes | **no** | registers applications, cannot assign roles |
+| `amp-client-onboarding-prototype` | yes | **no** | same |
+| `amp-role-assignment-test` | yes | **yes** | the default here - everything works |
+
+Run as one of the first two and the grant answers `500` naming what is missing, which is the honest
+behaviour:
 
 ```json
 { "status": 500, "title": "Internal Server Error",
@@ -302,13 +315,39 @@ whoever reviews the request:
              AppRoleAssignment.ReadWrite.All application permission." }
 ```
 
-`500` rather than `503`: nothing here is temporary, and a `503` invites a client to retry forever
-against something only a consent grant will fix. Graph's own `403` is about *this service's* identity,
-not the caller's, so passing it through would wrongly blame their credentials.
+`AppRoleAssignment.ReadWrite.All` is broad - it permits assigning any app role on any resource in the
+tenant - which is why `apps.yaml` in `external-entra-id` deliberately scopes the onboarding identity
+to owned applications only. Whether a self-serve onboarding service should hold it is a decision for
+whoever owns that repo, not a technical obstacle.
 
-That detail only appears because `spring.mvc.problemdetails.enabled` is on. Since Spring 6 a
-`ResponseStatusException`'s reason travels as RFC 7807, so without it the response carries a bare
-`503` and the message is lost - `server.error.include-message` does not bring it back.
+## Calling the API through APIM
+
+The point of all of it. `sps-api-mgmt-sbox` fronts the Court Schedule API at `amp/slc`:
+
+```bash
+curl -i "https://sps-api-mgmt-sbox.azure-api.net/amp/slc/case/$CASE_URN/courtschedule" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Ocp-Apim-Subscription-Key: $SUBSCRIPTION_KEY"
+```
+
+**Two credentials, doing different jobs.** The subscription key says *which subscriber this is* - it
+drives the rate limit (30 calls a minute), the quota (500 a day) and the concurrency cap, all keyed on
+it in the slc policy. The JWT says *this caller is genuinely who they claim and may call this API*.
+Neither substitutes for the other, and `apim-subscription-key-demo` issues the first half.
+
+The policy fails in three distinguishable ways, which is useful when something goes wrong:
+
+| What is wrong | What comes back |
+|---|---|
+| No `Authorization` header | `401` with `{"error":"Missing CNP Authorization header."}` |
+| Token for the wrong audience, or no `roles` | `401 Your JWT token failed CNP validation!` |
+| No subscription key | `401` from APIM itself, before any policy runs |
+
+A token with `"roles": null` fails the second of those - which is the whole reason the app role
+assignment above exists.
+
+There is also an `amp/slc-token` API on the same instance ("Get an Entra access token (sandbox)"),
+which wraps the token request for anyone who would rather not assemble it by hand.
 
 ## What permissions the onboarding identity needs
 

@@ -14,7 +14,10 @@ spring:
 
 entra:
   tenant-id: ${ENTRA_TENANT_ID:d44f885c-4fac-47bf-afde-d7d861ec4d7b}
-  onboarding-client-id: ${ENTRA_ONBOARDING_CLIENT_ID:8f867c90-73c7-437b-b9d7-bbfe04be8d4b}
+  # amp-role-assignment-test, which holds both permissions these calls need:
+  # Application.ReadWrite.OwnedBy to register, AppRoleAssignment.ReadWrite.All to grant a role.
+  # amp-client-onboarding has only the first, so the role endpoints fail against it.
+  onboarding-client-id: ${ENTRA_ONBOARDING_CLIENT_ID:aba0879b-39e2-452a-b934-f922cd9e6acb}
   onboarding-client-secret: ${ENTRA_ONBOARDING_CLIENT_SECRET:}
   # The API whose app roles a consumer gets assigned - hmcts-api-marketplace, the audience the
   # APIM validate-jwt policies check.
