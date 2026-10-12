@@ -15,8 +15,8 @@ const SANDBOX = {
 // Read on each use rather than captured at import, so it cannot matter whether this module was
 // loaded before or after the environment was set up.
 const config = {
-  get clientId () { return process.env.ENTRA_CLIENT_ID || SANDBOX.clientId },
-  get clientSecret () { return process.env.ENTRA_CLIENT_SECRET },
+  get clientId () { return process.env.ENTRA_SIGNIN_CLIENT_ID || SANDBOX.clientId },
+  get clientSecret () { return process.env.ENTRA_SIGNIN_CLIENT_SECRET },
   get authorizeEndpoint () { return process.env.ENTRA_AUTHORIZE_ENDPOINT || SANDBOX.authorizeEndpoint },
   get tokenEndpoint () { return process.env.ENTRA_TOKEN_ENDPOINT || SANDBOX.tokenEndpoint },
   get port () { return process.env.PORT || SANDBOX.port },
@@ -33,12 +33,15 @@ function assertConfigured () {
   if (config.clientSecret) return
 
   throw new Error([
-    'Cannot start: ENTRA_CLIENT_SECRET is not set.',
+    'Cannot start: ENTRA_SIGNIN_CLIENT_SECRET is not set.',
     '',
-    '  export ENTRA_CLIENT_SECRET=...   # from the Entra app registration',
+    '  export ENTRA_SIGNIN_CLIENT_SECRET=...   # from the Entra app registration',
     '  npm start',
     '',
-    'Everything else defaults to the HMCTS sandbox tenant. Never put the secret in a file here.'
+    'Everything else defaults to the HMCTS sandbox tenant. Never put the secret in a file here.',
+    '',
+    'SIGNIN, not ONBOARDING: this is the application that signs people in. The one that registers',
+    'applications through Graph is a different registration - see entra-app-registration-demo.'
   ].join('\n'))
 }
 

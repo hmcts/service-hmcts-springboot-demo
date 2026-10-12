@@ -21,7 +21,7 @@ Node 20.6 or later. Everything but the secret is defaulted to the HMCTS sandbox 
 ```bash
 cd entra-node-login-demo
 npm install
-export ENTRA_CLIENT_SECRET=...     # from the sandbox app registration
+export ENTRA_SIGNIN_CLIENT_SECRET=...     # from the sandbox app registration
 npm start                          # http://localhost:3100
 ```
 
@@ -29,9 +29,9 @@ The secret is the only thing with no default, so it is the only thing that can b
 app refuses to start without it rather than failing later during the token exchange:
 
 ```
-Cannot start: ENTRA_CLIENT_SECRET is not set.
+Cannot start: ENTRA_SIGNIN_CLIENT_SECRET is not set.
 
-  export ENTRA_CLIENT_SECRET=...   # from the Entra app registration
+  export ENTRA_SIGNIN_CLIENT_SECRET=...   # from the Entra app registration
   npm start
 ```
 
@@ -50,7 +50,7 @@ redirect URIs and set `PORT` to match.
 
 ### Pointing it at a different tenant
 
-Every default can be overridden from the environment: `ENTRA_CLIENT_ID`, `ENTRA_AUTHORIZE_ENDPOINT`,
+Every default can be overridden from the environment: `ENTRA_SIGNIN_CLIENT_ID`, `ENTRA_AUTHORIZE_ENDPOINT`,
 `ENTRA_TOKEN_ENDPOINT`, `ENTRA_REDIRECT_URI`, `PORT`. The two endpoints come from the tenant's
 `/.well-known/openid-configuration`.
 
