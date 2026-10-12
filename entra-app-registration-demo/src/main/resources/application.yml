@@ -11,3 +11,6 @@ entra:
   onboarding-client-secret: ${ENTRA_ONBOARDING_CLIENT_SECRET:}
   graph-base-url: ${ENTRA_GRAPH_BASE_URL:https://graph.microsoft.com/v1.0}
   login-base-url: ${ENTRA_LOGIN_BASE_URL:https://login.microsoftonline.com}
+  # Entra replication is slow, and how slow varies by tenant - tunable without a rebuild.
+  max-attempts: ${ENTRA_MAX_ATTEMPTS:10}
+  retry-delay-millis: ${ENTRA_RETRY_DELAY_MILLIS:500}

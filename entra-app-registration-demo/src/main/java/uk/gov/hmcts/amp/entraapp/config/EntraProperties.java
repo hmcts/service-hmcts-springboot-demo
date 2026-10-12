@@ -12,5 +12,7 @@ public record EntraProperties(String tenantId, String onboardingClientId,
                 + "sign-in application's that entra-node-login-demo uses")
         String onboardingClientSecret,
 
-        String graphBaseUrl, String loginBaseUrl) {
+        String graphBaseUrl, String loginBaseUrl,
+
+        int maxAttempts, int retryDelayMillis) {
 }

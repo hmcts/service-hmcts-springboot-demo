@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import uk.gov.hmcts.amp.entraapp.service.EntraAppRegistrationClient;
+import uk.gov.hmcts.amp.entraapp.service.EntraAppRegistrationService;
 
 import java.util.List;
 
@@ -26,18 +26,18 @@ public class ApplicationRegistrationController {
     public record NewApplication(@NotBlank String name) {
     }
 
-    private final EntraAppRegistrationClient registrations;
+    private final EntraAppRegistrationService registrations;
 
     /** The only time the client secret is ever available. Entra will not show it again. */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public EntraAppRegistrationClient.Registration register(@Valid @RequestBody final NewApplication request) {
+    public EntraAppRegistrationService.Registration register(@Valid @RequestBody final NewApplication request) {
         log.info("Registering application named:{}", request.name());
         return registrations.register(request.name());
     }
 
     @GetMapping
-    public List<EntraAppRegistrationClient.Summary> list() {
+    public List<EntraAppRegistrationService.Summary> list() {
         log.info("Listing applications");
         return registrations.list();
     }

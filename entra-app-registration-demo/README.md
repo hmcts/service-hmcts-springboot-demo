@@ -154,10 +154,70 @@ can sit in one shell without colliding, which is the point of the names.
 | `ENTRA_TENANT_ID` | the `hmctsextsbox` CIAM tenant |
 | `ENTRA_ONBOARDING_CLIENT_ID` | `8f867c90-...`, the amp-client-onboarding-prototype identity |
 | `ENTRA_ONBOARDING_CLIENT_SECRET` | *required* - no default, and never will have one |
+| `ENTRA_MAX_ATTEMPTS` | `10` - Entra replication is slow, and how slow varies by tenant |
+| `ENTRA_RETRY_DELAY_MILLIS` | `500` |
 | `ENTRA_GRAPH_BASE_URL` | `https://graph.microsoft.com/v1.0` |
 | `ENTRA_LOGIN_BASE_URL` | `https://login.microsoftonline.com` |
 
 Without the credential it answers `503` rather than failing at the first Graph call.
+
+## Using the credentials
+
+The Client ID and Secret are what a subscriber authenticates with. They work immediately, because the
+service principal was created alongside them:
+
+Take them straight off the registration:
+
+```bash
+read -r CLIENT_ID CLIENT_SECRET < <(curl -s -X POST localhost:8080/applications \
+  -H 'Content-Type: application/json' -d '{"name":"colin-test"}' \
+  | jq -r '"\(.clientId) \(.clientSecret)"')
+echo "ClientId:$CLIENT_ID ClientSecret:$CLIENT_SECRET"
+```
+
+```bash
+echo "ClientId:$CLIENT_ID ClientSecret:$CLIENT_SECRET"
+curl -s -X POST "https://login.microsoftonline.com/d44f885c-4fac-47bf-afde-d7d861ec4d7b/oauth2/v2.0/token" \
+  -d "client_id=$CLIENT_ID" \
+  --data-urlencode "client_secret=$CLIENT_SECRET" \
+  -d "scope=https://graph.microsoft.com/.default" \
+  -d "grant_type=client_credentials"
+```
+
+`--data-urlencode` on the secret, not `-d`: Entra secrets contain `~`, `.` and sometimes `+` or `=`,
+and an unencoded one is silently mangled into `AADSTS7000215: Invalid client secret provided`.
+
+That returns a token - but look at what is in it:
+
+```
+aud=https://graph.microsoft.com   roles=(none)
+```
+
+**Authenticated, but authorised for nothing.** Use it and Graph says so:
+
+```
+Authorization_RequestDenied - Insufficient privileges to complete the operation.
+```
+
+This is the thing worth understanding about `client_credentials`: there is no user, so there are no
+delegated scopes and no `scp` claim. Authorisation arrives as `roles`, and `roles` is empty until the
+application is **assigned an app role** on the API it wants to call.
+
+For one of your own APIs the scope would be `api://<api-app-id>/.default`, and without that API
+registration existing the request does not even get as far as permissions:
+
+```
+AADSTS500011: The resource principal named api://... was not found in the tenant
+```
+
+So a complete journey needs three things this demo does not do:
+
+1. an app registration **for the API**, with an Application ID URI and app roles
+2. an **app role assignment** linking this application's service principal to the API's
+3. something validating the token - APIM `validate-jwt`, or a Spring Boot resource server
+
+Step 2 needs the Graph permission `AppRoleAssignment.ReadWrite.All`, which the onboarding identity
+does not hold - see below.
 
 ## What permissions the onboarding identity needs
 

@@ -8,6 +8,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.server.ResponseStatusException;
+import uk.gov.hmcts.amp.entraapp.config.EntraProperties;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
@@ -30,14 +31,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /** The real Graph SDK against a mock Entra, so the calls it makes are visible. */
-class EntraAppRegistrationClientTest {
+class EntraAppRegistrationServiceTest {
 
     private static final String OBJECT_ID = "11111111-1111-1111-1111-111111111111";
     private static final String CLIENT_ID = "22222222-2222-2222-2222-222222222222";
     private static final String KEY_ID = "33333333-3333-3333-3333-333333333333";
+    private static final int ATTEMPTS = 4;
 
     private WireMockServer mockEntra;
-    private EntraAppRegistrationClient client;
+    private EntraAppRegistrationService client;
 
     @BeforeEach
     void startMockEntra() {
@@ -50,7 +52,9 @@ class EntraAppRegistrationClientTest {
         GraphServiceClient sdk = new GraphServiceClient(noRealCredential, "https://graph.microsoft.com/.default");
         sdk.getRequestAdapter().setBaseUrl(mockEntra.baseUrl());
 
-        client = new EntraAppRegistrationClient(sdk);
+        client = new EntraAppRegistrationService(sdk, new EntraProperties(
+                "a-tenant", "an-onboarding-app", "a-secret", mockEntra.baseUrl(), mockEntra.baseUrl(),
+                ATTEMPTS, 1));
     }
 
     @AfterEach
@@ -64,7 +68,7 @@ class EntraAppRegistrationClientTest {
         mockEntra.stubFor(post(urlPathEqualTo("/servicePrincipals")).willReturn(json("{\"id\":\"sp-1\"}")));
         stubAddPassword();
 
-        EntraAppRegistrationClient.Registration registration = client.register("Team Alpha");
+        EntraAppRegistrationService.Registration registration = client.register("Team Alpha");
 
         // Both ids come back: the caller needs clientId to use the application and objectId to remove it.
         assertThat(registration.objectId()).isEqualTo(OBJECT_ID);
@@ -94,7 +98,7 @@ class EntraAppRegistrationClientTest {
                 .whenScenarioStateIs("replicated")
                 .willReturn(json("{\"id\":\"sp-1\"}")));
 
-        EntraAppRegistrationClient.Registration registration = client.register("Team Alpha");
+        EntraAppRegistrationService.Registration registration = client.register("Team Alpha");
 
         assertThat(registration.clientId()).isEqualTo(CLIENT_ID);
         mockEntra.verify(2, postRequestedFor(urlPathEqualTo("/servicePrincipals")));
@@ -109,7 +113,7 @@ class EntraAppRegistrationClientTest {
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("Could not register the application");
 
-        mockEntra.verify(4, postRequestedFor(urlPathEqualTo("/servicePrincipals")));
+        mockEntra.verify(ATTEMPTS, postRequestedFor(urlPathEqualTo("/servicePrincipals")));
     }
 
     @Test
@@ -145,9 +149,9 @@ class EntraAppRegistrationClientTest {
                   {"id":"obj-1","appId":"app-1","displayName":"older","createdDateTime":"2026-01-02T03:04:05Z"}
                 ]}""")));
 
-        List<EntraAppRegistrationClient.Summary> found = client.list();
+        List<EntraAppRegistrationService.Summary> found = client.list();
 
-        assertThat(found).extracting(EntraAppRegistrationClient.Summary::displayName)
+        assertThat(found).extracting(EntraAppRegistrationService.Summary::displayName)
                 .containsExactly("older", "newer");
         assertThat(found.getFirst().objectId()).isEqualTo("obj-1");
         assertThat(found.getFirst().created()).isNotNull();
@@ -163,9 +167,9 @@ class EntraAppRegistrationClientTest {
                 .willReturn(json("""
                 {"value":[{"id":"obj-2","appId":"app-2","displayName":"page two"}]}""")));
 
-        List<EntraAppRegistrationClient.Summary> found = client.list();
+        List<EntraAppRegistrationService.Summary> found = client.list();
 
-        assertThat(found).extracting(EntraAppRegistrationClient.Summary::displayName)
+        assertThat(found).extracting(EntraAppRegistrationService.Summary::displayName)
                 .containsExactly("page one", "page two");
     }
 

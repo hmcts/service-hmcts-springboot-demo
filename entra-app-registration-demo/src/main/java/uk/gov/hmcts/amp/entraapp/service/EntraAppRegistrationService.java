@@ -11,8 +11,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+import uk.gov.hmcts.amp.entraapp.config.EntraProperties;
 
-import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -31,10 +31,7 @@ import static java.util.Comparator.nullsLast;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class EntraAppRegistrationClient {
-
-    private static final int RETRY_DELAY_MSECS = 200;
-    private static final int MAX_ATTEMPTS = 4;
+public class EntraAppRegistrationService {
 
     public record Registration(String objectId, String clientId, String clientSecret, String keyId) {
     }
@@ -47,8 +44,8 @@ public class EntraAppRegistrationClient {
     }
 
     private final GraphServiceClient graph;
+    private final EntraProperties config;
 
-    private final Duration retryDelay = Duration.ofMillis(RETRY_DELAY_MSECS);
 
     public Registration register(final String applicationName) {
         Application created = createApplication(applicationName);
@@ -125,30 +122,29 @@ public class EntraAppRegistrationClient {
 
     private <T> T withRetry(final String description, final GraphCall<T> call) {
         RuntimeException lastFailure = null;
-        for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        for (int attempt = 1; attempt <= config.maxAttempts(); attempt++) {
             try {
                 return call.call();
             } catch (final RuntimeException e) {
                 lastFailure = e;
-                log.warn("Graph call '{}' failed on attempt {}/{}: {}", description, attempt, MAX_ATTEMPTS,
+                log.warn("Graph call '{}' failed on attempt {}/{}: {}", description, attempt, config.maxAttempts(),
                         e.getMessage());
-                if (attempt < MAX_ATTEMPTS) {
+                if (attempt < config.maxAttempts()) {
                     pause();
                 }
             }
         }
-        log.error("Graph call '{}' did not succeed after {} attempts.", description, MAX_ATTEMPTS, lastFailure);
+        log.error("Graph call '{}' did not succeed after {} attempts.", description, config.maxAttempts(), lastFailure);
         throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
                 "Could not register the application. Please try again.", lastFailure);
     }
 
     private void pause() {
         try {
-            Thread.sleep(retryDelay.toMillis());
+            Thread.sleep(config.retryDelayMillis());
         } catch (final InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Interrupted while retrying.");
         }
     }
-
 }
