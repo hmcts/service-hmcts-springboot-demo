@@ -13,6 +13,7 @@ the Azure SDK for the same reason.
 
 | | | |
 |---|---|---|
+| `GET` | `/applications` | every application this identity owns, oldest first |
 | `POST` | `/applications` | register one; answers with its Client ID and Secret |
 | `DELETE` | `/applications/{objectId}` | remove it, and with it the credentials |
 
@@ -46,7 +47,7 @@ Four things in that are easy to get wrong:
   /applications` cannot return one, and `addPassword` has to exist as a separate step.
 - **The last two calls need retrying.** Graph's directory read replicas lag the write that created
   the application, so the very next call can 404 against a stale replica. Four attempts, two seconds
-  apart. This appears only against the real Graph; no stand-in will ever show it to you.
+  apart. This appears only against the real Graph; no mock Entra will ever show it to you.
 
 A registration that fails after the application exists takes it away again. The service principal and
 password steps come after the application is created, so if they exhaust their retries the
@@ -87,6 +88,25 @@ curl -s -X POST localhost:8080/applications \
 Both ids come back for a reason: `clientId` is what a subscriber authenticates with, `objectId` is how
 the application is addressed again afterwards. Keep it, or you cannot remove what you just made.
 
+List what is there, to find what is worth removing. Oldest first, and never with a secret - Entra
+cannot give one back:
+
+```bash
+curl -s localhost:8080/applications
+```
+
+```json
+[
+  { "objectId": "...", "clientId": "...", "displayName": "an-old-test", "created": "2026-07-06T09:12:44Z" },
+  { "objectId": "...", "clientId": "...", "displayName": "colin-test",  "created": "2026-10-12T08:01:02Z" }
+]
+```
+
+Sorted in Java, not by Graph: `$orderby` on applications is refused outright with *"Sorting not
+supported for 'Application'"* unless the request opts into advanced queries. A mock will not tell
+you that - it serves whatever you stub, which is how this passed its tests and then 500'd against the
+real tenant.
+
 ```bash
 curl -i -X DELETE localhost:8080/applications/7c1d9f2e-4b58-4a31-9f0c-2e6d8a1b3c44
 ```
@@ -100,9 +120,9 @@ Deleting the application removes its service principal with it. These are real w
 App registrations.
 
 
-The secret is the only setting with no default, so it is the only one that can be missing. Without it
-the app refuses to start, through a Spring Boot `FailureAnalyzer` so the reason is the last thing on
-screen rather than buried in a stack trace:
+The secret is the only setting with no default, so it is the only one that can be missing. It is
+`@NotBlank` on `EntraProperties`, so Spring Boot's own binding diagnostics report it at startup -
+rather than a 401 from Graph on the first registration:
 
 ```
 ***************************
@@ -110,11 +130,12 @@ APPLICATION FAILED TO START
 ***************************
 
 Description:
-ENTRA_ONBOARDING_CLIENT_SECRET is not set, and it is the only setting with no default.
+Binding to target ...EntraProperties failed:
 
-Action:
-Export the amp-client-onboarding secret and start again:
-    export ENTRA_ONBOARDING_CLIENT_SECRET=...
+    Property: entra.onboardingClientSecret
+    Value: ""
+    Reason: set ENTRA_ONBOARDING_CLIENT_SECRET - the amp-client-onboarding secret, not the
+            sign-in application's that entra-node-login-demo uses
 ```
 
 **SIGNIN and ONBOARDING are two different registrations**, which is why the variables say which:

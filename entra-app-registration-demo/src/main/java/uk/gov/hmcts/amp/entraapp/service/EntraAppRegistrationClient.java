@@ -3,6 +3,7 @@ package uk.gov.hmcts.amp.entraapp.service;
 import com.microsoft.graph.applications.item.addpassword.AddPasswordPostRequestBody;
 import com.microsoft.graph.models.Application;
 import com.microsoft.graph.models.PasswordCredential;
+import com.microsoft.graph.models.ApplicationCollectionResponse;
 import com.microsoft.graph.models.ServicePrincipal;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +13,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Duration;
+import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
+import static java.util.Comparator.comparing;
+import static java.util.Comparator.naturalOrder;
+import static java.util.Comparator.nullsLast;
 
 /**
  * Registers a Microsoft Entra application and hands back credentials a subscriber can use. Three Graph
@@ -23,24 +31,19 @@ import java.time.Duration;
  *                                                 cannot get a token at all
  *   applications().byApplicationId(id).addPassword()   the secret, returned once and never again
  * </pre>
- *
- * <p>The last two are retried. Graph's directory read replicas lag the write that created the
- * application, so the very next call can fail against a stale replica. Nothing below the wire shows
- * this: it appears only against the real Graph.
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class EntraAppRegistrationClient {
 
+    private static final int RETRY_DELAY_MSECS = 200;
     private static final int MAX_ATTEMPTS = 4;
 
-    /**
-     * {@code objectId} is the directory object, which is how the application is addressed again later;
-     * {@code clientId} is what a subscriber authenticates with. Both are returned because the caller
-     * needs one to use the application and the other to remove it.
-     */
     public record Registration(String objectId, String clientId, String clientSecret, String keyId) {
+    }
+
+    public record Summary(String objectId, String clientId, String displayName, OffsetDateTime created) {
     }
 
     private interface GraphCall<T> {
@@ -49,8 +52,7 @@ public class EntraAppRegistrationClient {
 
     private final GraphServiceClient graph;
 
-    // Not final, so a test can shorten it. Everything else waits the full two seconds.
-    private Duration retryDelay = Duration.ofSeconds(2);
+    private final Duration retryDelay = Duration.ofMillis(RETRY_DELAY_MSECS);
 
     public Registration register(final String applicationName) {
         Application created = createApplication(applicationName);
@@ -71,11 +73,6 @@ public class EntraAppRegistrationClient {
         }
     }
 
-    /**
-     * Removes an application whose registration did not finish. A failure to clean up must not replace
-     * the failure that caused it - whoever reads the error needs to know registration failed, not that
-     * tidying up afterwards did.
-     */
     private void removeOrphan(final String objectId, final RuntimeException cause) {
         try {
             delete(objectId);
@@ -87,10 +84,21 @@ public class EntraAppRegistrationClient {
         }
     }
 
-    /**
-     * Removes an application, so a registration that failed part-way does not leave one behind whose
-     * secret nobody was ever shown. Deleting it removes its service principal too.
-     */
+    public List<Summary> list() {
+        List<Summary> found = new ArrayList<>();
+        ApplicationCollectionResponse page = graph.applications().get(request ->
+                request.queryParameters.select = new String[] {"id", "appId", "displayName", "createdDateTime"});
+        while (page != null) {
+            page.getValue().forEach(application -> found.add(new Summary(application.getId(),
+                    application.getAppId(), application.getDisplayName(), application.getCreatedDateTime())));
+            String nextPage = page.getOdataNextLink();
+            page = nextPage == null ? null
+                    : graph.applications().withUrl(nextPage).get();
+        }
+        found.sort(comparing(Summary::created, nullsLast(naturalOrder())));
+        return found;
+    }
+
     public void delete(final String objectId) {
         withRetry("delete application", () -> {
             graph.applications().byApplicationId(objectId).delete();
@@ -105,15 +113,12 @@ public class EntraAppRegistrationClient {
         return graph.applications().post(application);
     }
 
-    // Built from the client id, not the object id: a service principal names the application it is for
-    // by appId.
     private ServicePrincipal createServicePrincipal(final String clientId) {
         ServicePrincipal servicePrincipal = new ServicePrincipal();
         servicePrincipal.setAppId(clientId);
         return graph.servicePrincipals().post(servicePrincipal);
     }
 
-    // Addressed by object id, which only the create response carries.
     private PasswordCredential addPassword(final String objectId) {
         PasswordCredential wanted = new PasswordCredential();
         wanted.setDisplayName("entra-app-registration-demo");
@@ -145,13 +150,9 @@ public class EntraAppRegistrationClient {
         try {
             Thread.sleep(retryDelay.toMillis());
         } catch (final InterruptedException e) {
-            // Restore the flag rather than swallow it, so a shutting-down pod still sees the interrupt.
             Thread.currentThread().interrupt();
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Interrupted while retrying.");
         }
     }
 
-    void retryDelay(final Duration delay) {
-        this.retryDelay = delay;
-    }
 }
