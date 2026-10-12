@@ -57,11 +57,34 @@ public class EntraAppRegistrationClient {
         String objectId = created.getId();
         String clientId = created.getAppId();
 
-        withRetry("create service principal", () -> createServicePrincipal(clientId));
-        PasswordCredential secret = withRetry("add password", () -> addPassword(objectId));
+        // From here the application exists. Anything that goes wrong now has to take it away again, or
+        // it is left in the directory with no service principal, no secret, and nobody holding its id.
+        try {
+            withRetry("create service principal", () -> createServicePrincipal(clientId));
+            PasswordCredential secret = withRetry("add password", () -> addPassword(objectId));
 
-        log.info("Registered Entra application {} for '{}'", clientId, applicationName);
-        return new Registration(objectId, clientId, secret.getSecretText(), String.valueOf(secret.getKeyId()));
+            log.info("Registered Entra application {} for '{}'", clientId, applicationName);
+            return new Registration(objectId, clientId, secret.getSecretText(), String.valueOf(secret.getKeyId()));
+        } catch (final RuntimeException registrationFailed) {
+            removeOrphan(objectId, registrationFailed);
+            throw registrationFailed;
+        }
+    }
+
+    /**
+     * Removes an application whose registration did not finish. A failure to clean up must not replace
+     * the failure that caused it - whoever reads the error needs to know registration failed, not that
+     * tidying up afterwards did.
+     */
+    private void removeOrphan(final String objectId, final RuntimeException cause) {
+        try {
+            delete(objectId);
+            log.warn("Registration failed after the application was created; removed orphaned {}", objectId);
+        } catch (final RuntimeException cleanupFailed) {
+            cause.addSuppressed(cleanupFailed);
+            log.error("Registration failed and orphaned application {} could not be removed.",
+                    objectId, cleanupFailed);
+        }
     }
 
     /**

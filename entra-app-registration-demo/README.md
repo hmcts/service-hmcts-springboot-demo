@@ -48,6 +48,13 @@ Four things in that are easy to get wrong:
   the application, so the very next call can 404 against a stale replica. Four attempts, two seconds
   apart. This appears only against the real Graph; no stand-in will ever show it to you.
 
+A registration that fails after the application exists takes it away again. The service principal and
+password steps come after the application is created, so if they exhaust their retries the
+application would otherwise be left in the directory with no secret and nobody holding its id - which
+is how orphans accumulate. A failure to clean up is reported as a suppressed exception rather than
+replacing the failure that caused it: the caller needs to know registration failed, not that tidying
+up afterwards did.
+
 Deleting the application removes its service principal too. It is addressed by **object id**, not
 Client ID: the raw API accepts Graph's alternate key syntax `/applications(appId='..')`, but the SDK's
 `byApplicationId` takes the object id, so that is what the caller keeps.

@@ -111,6 +111,31 @@ class EntraAppRegistrationClientTest {
     }
 
     @Test
+    void a_registration_that_fails_after_the_application_exists_should_not_leave_it_behind() {
+        stubCreateApplication();
+        graph.stubFor(post(urlPathEqualTo("/servicePrincipals")).willReturn(aResponse().withStatus(404)));
+        graph.stubFor(delete(urlPathMatching("/applications/.*")).willReturn(aResponse().withStatus(204)));
+
+        assertThatThrownBy(() -> client.register("Team Alpha")).isInstanceOf(ResponseStatusException.class);
+
+        // The application was created before the failure, so it has to be taken away again.
+        graph.verify(deleteRequestedFor(urlPathEqualTo("/applications/" + OBJECT_ID)));
+    }
+
+    @Test
+    void a_cleanup_that_also_fails_should_still_report_the_registration_failure() {
+        stubCreateApplication();
+        graph.stubFor(post(urlPathEqualTo("/servicePrincipals")).willReturn(aResponse().withStatus(404)));
+        graph.stubFor(delete(urlPathMatching("/applications/.*")).willReturn(aResponse().withStatus(500)));
+
+        assertThatThrownBy(() -> client.register("Team Alpha"))
+                .isInstanceOf(ResponseStatusException.class)
+                // Not "could not delete": the caller needs to know registration failed.
+                .hasMessageContaining("Could not register the application")
+                .satisfies(failure -> assertThat(failure.getSuppressed()).isNotEmpty());
+    }
+
+    @Test
     void deleting_an_application_should_address_it_by_object_id() {
         graph.stubFor(delete(urlPathMatching("/applications/.*")).willReturn(aResponse().withStatus(204)));
 
