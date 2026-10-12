@@ -54,10 +54,6 @@ entra-app-registration-demo
 Registers an Entra application through Microsoft Graph and returns a Client ID and Client Secret for a subscriber.
 Three Graph calls, with the retry the real directory needs. The backend half of what entra-node-login-demo starts.
 
-entra-auth-demo - WIP ?
-Spring Boot as an OAuth2 resource server validating Entra bearer tokens, with mock-oauth2-server standing in
-for Entra
-
 
 ## Filters
 audit-filter

@@ -204,8 +204,8 @@ This demo shows the flow. Two things are deliberately not production-shaped:
    the `oid`, not the name or email.
 
 In Spring Boot, `spring-boot-starter-oauth2-client` does both of these for you, along with the
-`state` handling and the token exchange - see `entra-auth-demo` in this repo for the resource-server
-half. This demo hand-rolls them precisely so the steps are visible.
+`state` handling and the token exchange. This demo hand-rolls them precisely so the steps are
+visible.
 
 ## The tests
 
