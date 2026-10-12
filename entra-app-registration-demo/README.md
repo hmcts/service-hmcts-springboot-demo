@@ -154,7 +154,7 @@ can sit in one shell without colliding, which is the point of the names.
 | `ENTRA_TENANT_ID` | the `hmctsextsbox` CIAM tenant |
 | `ENTRA_ONBOARDING_CLIENT_ID` | `8f867c90-...`, the amp-client-onboarding-prototype identity |
 | `ENTRA_ONBOARDING_CLIENT_SECRET` | *required* - no default, and never will have one |
-| `ENTRA_MAX_ATTEMPTS` | `10` - Entra replication is slow, and how slow varies by tenant |
+| `ENTRA_MAX_ATTEMPTS` | `20` - 20 x 500ms, because Entra replication really does take seconds |
 | `ENTRA_RETRY_DELAY_MILLIS` | `500` |
 | `ENTRA_GRAPH_BASE_URL` | `https://graph.microsoft.com/v1.0` |
 | `ENTRA_LOGIN_BASE_URL` | `https://login.microsoftonline.com` |
