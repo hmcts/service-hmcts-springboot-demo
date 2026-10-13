@@ -42,7 +42,7 @@ Some gotchas:
 
 - **Everything after the first call needs retrying.** Graph's directory read replicas lag the write
   that created the application, so the next call can 404 against a stale replica - including the
-  lookup that finds a service principal created seconds earlier. 20 attempts, 500ms apart, tunable
+  lookup that finds a service principal created seconds earlier. 15 attempts, 2s apart, tunable
   with `ENTRA_MAX_ATTEMPTS` and `ENTRA_RETRY_DELAY_MILLIS`. Observed taking several seconds against
   the sandbox tenant, with a registration failing outright on an earlier budget of 4 x 200ms. This
   appears only against the real Graph; no mock Entra will ever show it to you.
@@ -86,16 +86,18 @@ echo "$TOKEN" | jq -R 'split(".")[1] | @base64d | fromjson | {aud, roles, azp}'
 
 # Assign a role to an application, so APIM will accept its token
 curl -i -X POST localhost:8080/applications/$CLIENT_ID/roles \
-  -H 'Content-Type: application/json' -d '{"role":"slc.read"}'
+  -H 'Content-Type: application/json' -d '{"role":"app.read"}'
 
 # Take a role away from an application
-curl -i -X DELETE localhost:8080/applications/$CLIENT_ID/roles/slc.read
+curl -i -X DELETE localhost:8080/applications/$CLIENT_ID/roles/app.read
 
 # Call the slc API through sbox APIM with that token
-# Needs BOTH: the JWT for validate-jwt, and a subscription key because the product requires one
+# Needs ALL THREE: the JWT for validate-jwt, a subscription key because the product requires one,
+# and a correlation id, which the API itself requires
 curl -i "https://sps-api-mgmt.sandbox.api.hmcts.net/amp/slc/case/$CASE_URN/courtschedule" \
   -H "Authorization: Bearer $TOKEN" \
-  -H "Ocp-Apim-Subscription-Key: $SUBSCRIPTION_KEY"
+  -H "Ocp-Apim-Subscription-Key: $APIM_SUBSCRIPTION_KEY" \
+  -H "X-Correlation-ID: $(uuidgen)"
 
 # Delete an application by clientId - its service principal goes with it
 curl -i -X DELETE localhost:8080/applications/$CLIENT_ID
@@ -107,7 +109,7 @@ curl -i -X DELETE localhost:8080/applications/$CLIENT_ID
   "clientId": "e9a4b17d-6f32-4c90-8d55-1a2b3c4d5e6f",
   "clientSecret": "shown once, never again",
   "keyId": "b3f8c21a-9d47-4e65-a0b2-7c9e1f4d8a33",
-  "roles": ["slc.read"]
+  "roles": ["app.read"]
 }
 ```
 
@@ -130,8 +132,8 @@ Listing shows what is there, oldest first, and never with a secret - Entra canno
 | `ENTRA_TENANT_ID` | the `hmctsextsbox` CIAM tenant                                                |
 | `ENTRA_ONBOARDING_CLIENT_ID` | `8f867c90-...`, the amp-client-onboarding-prototype identity                  |
 | `ENTRA_ONBOARDING_CLIENT_SECRET` | *required* - no default, and never will have one                              |
-| `ENTRA_MAX_ATTEMPTS` | `20` - 20 x 500ms, because Entra replication really does take several seconds |
-| `ENTRA_RETRY_DELAY_MILLIS` | `500`                                                                         |
+| `ENTRA_MAX_ATTEMPTS` | `15` - 15 x 2s, because Entra replication really does take seconds        |
+| `ENTRA_RETRY_DELAY_MILLIS` | `2000`                                                                        |
 | `ENTRA_GRAPH_BASE_URL` | `https://graph.microsoft.com/v1.0`                                            |
 | `ENTRA_LOGIN_BASE_URL` | `https://login.microsoftonline.com`                                           |
 
@@ -217,14 +219,54 @@ tenant - which is why `apps.yaml` in `external-entra-id` deliberately scopes the
 to owned applications only. Whether a self-serve onboarding service should hold it is a decision for
 whoever owns that repo, not a technical obstacle.
 
-## Calling the API through APIM
+## The whole journey in one command
 
-The point of all of it. `sps-api-mgmt-sbox` fronts the Court Schedule API at `amp/slc`:
+`journey.sh` registers an application, grants it a role, fetches a token and calls slc through APIM -
+against the real sandbox, start to finish:
 
 ```bash
-curl -i "https://sps-api-mgmt-sbox.azure-api.net/amp/slc/case/$CASE_URN/courtschedule" \
+export APIM_SUBSCRIPTION_KEY='<paste the slc product key - quoted>'
+./journey.sh
+```
+
+It needs this demo running and `jq`. `CASE_URN`, `ROLE`, `NAME` and `DEMO_URL` are overridable, and
+`KEEP=1` leaves the application behind instead of deleting it.
+
+The script registers the application and grants the role as two calls, not one, because a service
+principal seconds old is not yet assignable: Entra rejects the assignment as `Not a valid reference
+update` - the same payload that succeeds instantly against a principal a day old - and it can keep
+doing so for minutes. Registering first leaves the application standing while the grant is retried,
+rather than a single call that blocks and then rolls the registration back. `GRANT_ATTEMPTS` (5)
+controls how many times the script tries.
+
+The token request is retried too: a secret seconds old is rejected as `invalid_client` until Entra
+has replicated it. A `404` at the last step is a result, not a failure - it means the gateway
+accepted the token and the subscription key, and the backend simply has no such case.
+
+The application is deleted again at the end whatever happens - but a script that is killed never
+runs its trap, so orphans do happen. That is why the name carries the person who ran it,
+`api-marketplace-demo-<user>-<time>`: an orphan nobody can be traced to is one nobody deletes.
+Find and remove your own with:
+
+```bash
+curl -s localhost:8080/applications \
+  | jq -r --arg me "api-marketplace-demo-$(whoami)" \
+      '.[] | select(.displayName | startswith($me)) | "\(.displayName) \(.clientId)"'
+curl -i -X DELETE localhost:8080/applications/$CLIENT_ID
+```
+
+The gateway is `sps-api-mgmt.sandbox.api.hmcts.net`, not the `*.azure-api.net` name - the APIM
+instance is Internal VNet and its Azure name has no public DNS record. `APIM_GATEWAY` overrides it.
+
+## Calling the API through APIM
+
+The point of all of it. `sps-api-mgmt.sandbox.api.hmcts.net` fronts the Court Schedule API at `amp/slc`:
+
+```bash
+curl -i "https://sps-api-mgmt.sandbox.api.hmcts.net/amp/slc/case/$CASE_URN/courtschedule" \
   -H "Authorization: Bearer $TOKEN" \
-  -H "Ocp-Apim-Subscription-Key: $SUBSCRIPTION_KEY"
+  -H "Ocp-Apim-Subscription-Key: $APIM_SUBSCRIPTION_KEY" \
+  -H "X-Correlation-ID: $(uuidgen)"
 ```
 
 **Two credentials, doing different jobs.** The subscription key says *which subscriber this is* - it

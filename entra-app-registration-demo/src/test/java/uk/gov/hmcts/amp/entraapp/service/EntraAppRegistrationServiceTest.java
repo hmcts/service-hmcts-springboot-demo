@@ -263,6 +263,40 @@ class EntraAppRegistrationServiceTest {
     }
 
     @Test
+    void an_assignment_whose_reference_is_not_found_yet_should_be_retried() {
+        stubServicePrincipalLookups();
+        stubApiRoles();
+        // Graph's other way of saying the principal has not replicated: 404 "does not exist".
+        mockEntra.stubFor(post(urlPathEqualTo("/servicePrincipals/" + API_SP_ID + "/appRoleAssignedTo"))
+                .inScenario("missing").whenScenarioStateIs(STARTED)
+                .willReturn(aResponse().withStatus(404)).willSetStateTo("present"));
+        mockEntra.stubFor(post(urlPathEqualTo("/servicePrincipals/" + API_SP_ID + "/appRoleAssignedTo"))
+                .inScenario("missing").whenScenarioStateIs("present")
+                .willReturn(json("{\"id\":\"assignment-1\"}")));
+
+        client.grantApiAccess(CLIENT_ID, "slc.read");
+
+        mockEntra.verify(2, postRequestedFor(urlPathEqualTo("/servicePrincipals/" + API_SP_ID + "/appRoleAssignedTo")));
+    }
+
+    @Test
+    void an_assignment_whose_reference_is_not_valid_yet_should_be_retried() {
+        stubServicePrincipalLookups();
+        stubApiRoles();
+        // Graph says 400 "Not a valid reference update" while the principal is still replicating.
+        mockEntra.stubFor(post(urlPathEqualTo("/servicePrincipals/" + API_SP_ID + "/appRoleAssignedTo"))
+                .inScenario("reference").whenScenarioStateIs(STARTED)
+                .willReturn(aResponse().withStatus(400)).willSetStateTo("valid"));
+        mockEntra.stubFor(post(urlPathEqualTo("/servicePrincipals/" + API_SP_ID + "/appRoleAssignedTo"))
+                .inScenario("reference").whenScenarioStateIs("valid")
+                .willReturn(json("{\"id\":\"assignment-1\"}")));
+
+        client.grantApiAccess(CLIENT_ID, "slc.read");
+
+        mockEntra.verify(2, postRequestedFor(urlPathEqualTo("/servicePrincipals/" + API_SP_ID + "/appRoleAssignedTo")));
+    }
+
+    @Test
     void a_refused_assignment_should_name_the_permission_that_is_missing() {
         stubServicePrincipalLookups();
         stubApiRoles();
@@ -276,6 +310,9 @@ class EntraAppRegistrationServiceTest {
                 .asInstanceOf(throwable(ResponseStatusException.class))
                 .extracting(ResponseStatusException::getStatusCode)
                 .isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+
+        // Tried once, not retried: a permission refusal will not improve by asking again.
+        mockEntra.verify(1, postRequestedFor(urlPathEqualTo("/servicePrincipals/" + API_SP_ID + "/appRoleAssignedTo")));
     }
 
     private void stubServicePrincipalLookups() {

@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import uk.gov.hmcts.amp.entraapp.service.EntraAppRegistrationService;
@@ -20,7 +19,6 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @Slf4j
-@RequestMapping("/applications")
 public class ApplicationRegistrationController {
 
     /** {@code roles} is optional - without it the application is registered but can call nothing. */
@@ -37,40 +35,40 @@ public class ApplicationRegistrationController {
     private final EntraAppRegistrationService registrations;
 
     /** The only time the client secret is ever available. Entra will not show it again. */
-    @PostMapping
+    @PostMapping("/applications")
     @ResponseStatus(HttpStatus.CREATED)
     public EntraAppRegistrationService.Registration register(@Valid @RequestBody final NewApplication request) {
         log.info("Registering application named:{} with roles:{}", request.name(), request.roles());
         return registrations.register(request.name(), request.roles());
     }
 
-    @GetMapping
+    @GetMapping("/applications")
     public List<EntraAppRegistrationService.Summary> list() {
         log.info("Listing applications");
         return registrations.list();
     }
 
-    @GetMapping("/{clientId}")
+    @GetMapping("/applications/{clientId}")
     public EntraAppRegistrationService.Detail get(@PathVariable final String clientId) {
         log.info("Reading application clientId:{}", clientId);
         return registrations.get(clientId);
     }
 
-    @PostMapping("/{clientId}/roles")
+    @PostMapping("/applications/{clientId}/roles")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void grantApiAccess(@PathVariable final String clientId, @Valid @RequestBody final ApiAccess request) {
         log.info("Granting role:{} to application clientId:{}", request.role(), clientId);
         registrations.grantApiAccess(clientId, request.role());
     }
 
-    @DeleteMapping("/{clientId}/roles/{role}")
+    @DeleteMapping("/applications/{clientId}/roles/{role}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void revokeApiAccess(@PathVariable final String clientId, @PathVariable final String role) {
         log.info("Revoking role:{} from application clientId:{}", role, clientId);
         registrations.revokeApiAccess(clientId, role);
     }
 
-    @DeleteMapping("/{clientId}")
+    @DeleteMapping("/applications/{clientId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable final String clientId) {
         log.info("Deleting application clientId:{}", clientId);
