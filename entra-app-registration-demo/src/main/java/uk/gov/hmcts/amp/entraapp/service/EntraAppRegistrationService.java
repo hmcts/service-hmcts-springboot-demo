@@ -123,13 +123,48 @@ public class EntraAppRegistrationService {
         assignment.setResourceId(UUID.fromString(apiPrincipalId));
         assignment.setAppRoleId(appRoleId(apiPrincipalId, roleValue));
 
-        try {
-            graph.servicePrincipals().byServicePrincipalId(apiPrincipalId)
-                    .appRoleAssignedTo().post(assignment);
-        } catch (final ApiException e) {
-            throw assignmentRefused(e);
-        }
+        // All three are object ids, none of them secret, and a wrong one is otherwise invisible:
+        // Graph answers "Not a valid reference update" without saying which reference it means.
+        log.info("Assigning role {} ({}) - principal {} on resource {}",
+                roleValue, assignment.getAppRoleId(), consumerPrincipalId, apiPrincipalId);
+        assignWhenTheReferenceBecomesValid(apiPrincipalId, assignment, roleValue);
         log.info("Granted {} on {} to application {}", roleValue, config.apiClientId(), consumerClientId);
+    }
+
+    /**
+     * A service principal created seconds ago can be found by a lookup and still not be usable as the
+     * target of a reference update - the two reads hit different replicas. Graph reports that in more
+     * than one way: 400 "Not a valid reference update", and 404 "does not exist or one of its queried
+     * reference-property objects are not present". Both are worth waiting out.
+     *
+     * <p>Anything else - a 403 above all - will not improve, so it fails immediately with what Graph
+     * said rather than after twenty pointless attempts.
+     */
+    private void assignWhenTheReferenceBecomesValid(final String apiPrincipalId,
+                                                    final AppRoleAssignment assignment,
+                                                    final String roleValue) {
+        ApiException notYetValid = null;
+        for (int attempt = 1; attempt <= config.maxAttempts(); attempt++) {
+            try {
+                graph.servicePrincipals().byServicePrincipalId(apiPrincipalId)
+                        .appRoleAssignedTo().post(assignment);
+                return;
+            } catch (final ApiException e) {
+                if (!stillReplicating(e)) {
+                    throw assignmentRefused(e);
+                }
+                notYetValid = e;
+                log.warn("Assigning {} not yet valid on attempt {}/{}: {}",
+                        roleValue, attempt, config.maxAttempts(), e.getMessage());
+                pause();
+            }
+        }
+        throw assignmentRefused(notYetValid);
+    }
+
+    private boolean stillReplicating(final ApiException failure) {
+        return failure.getResponseStatusCode() == HttpStatus.BAD_REQUEST.value()
+                || failure.getResponseStatusCode() == HttpStatus.NOT_FOUND.value();
     }
 
     private String servicePrincipalObjectId(final String appId, final String notFound) {
@@ -158,7 +193,6 @@ public class EntraAppRegistrationService {
 
     /** The permission nobody in the tenant holds yet, named so the error says what to ask for. */
     private ResponseStatusException assignmentRefused(final ApiException cause) {
-        // Logged here because this path is not retried, so nothing else would record why Graph said no.
         log.error("Graph refused the app role assignment with {}: {}",
                 cause.getResponseStatusCode(), cause.getMessage(), cause);
         if (cause.getResponseStatusCode() == HttpStatus.FORBIDDEN.value()) {
@@ -168,7 +202,9 @@ public class EntraAppRegistrationService {
                     "Graph refused the app role assignment. The onboarding identity needs the "
                             + "AppRoleAssignment.ReadWrite.All application permission.", cause);
         }
-        return new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Could not assign the app role.", cause);
+        // Anything else carries Graph's own words, which are more use than a status alone.
+        return new ResponseStatusException(HttpStatus.BAD_GATEWAY,
+                "Could not assign the app role. Graph said: " + cause.getMessage(), cause);
     }
 
     /** One application, with the API roles it has been granted - what it can actually call. */
