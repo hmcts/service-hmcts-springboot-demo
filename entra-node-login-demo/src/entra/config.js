@@ -49,7 +49,7 @@ function assertConfigured () {
   throw new Error([
     'Cannot start: ENTRA_SIGNIN_CLIENT_SECRET is not set.',
     '',
-    '  export ENTRA_SIGNIN_CLIENT_SECRET=\'<paste it - quoted, the value contains ~>\'',
+    '  export ENTRA_SIGNIN_CLIENT_SECRET=...   # from the Entra app registration',
     '  npm start',
     '',
     'Everything else defaults to the HMCTS sandbox tenant. Never put the secret in a file here.',

@@ -64,7 +64,7 @@ Client ID: the raw API accepts Graph's alternate key syntax `/applications(appId
 
 ```bash
 cd entra-app-registration-demo
-export ENTRA_ONBOARDING_CLIENT_SECRET='<paste it - quoted, because the value contains ~>'
+export ENTRA_ONBOARDING_CLIENT_SECRET=...
 ./gradlew bootRun
 ```
 
