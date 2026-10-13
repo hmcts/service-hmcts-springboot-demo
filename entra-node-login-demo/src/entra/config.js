@@ -14,9 +14,9 @@ const SANDBOX = {
 
 // Entra publishes both at <authority>/<tenant>/v2.0/.well-known/openid-configuration; they are
 // derived rather than configured so a different tenant needs two settings, not four.
-const endpoint = name =>
-  `${process.env.ENTRA_AUTHORITY_HOST || SANDBOX.authorityHost}/` +
-  `${process.env.ENTRA_TENANT_ID || SANDBOX.tenantId}/oauth2/v2.0/${name}`
+const authority = () =>
+  `${process.env.ENTRA_AUTHORITY_HOST || SANDBOX.authorityHost}/${config.tenantId}`
+const endpoint = name => `${authority()}/oauth2/v2.0/${name}`
 
 // Read on each use rather than captured at import, so it cannot matter whether this module was
 // loaded before or after the environment was set up.
@@ -25,6 +25,12 @@ const config = {
   get clientSecret () { return process.env.ENTRA_SIGNIN_CLIENT_SECRET },
   get authorizeEndpoint () { return process.env.ENTRA_AUTHORIZE_ENDPOINT || endpoint('authorize') },
   get tokenEndpoint () { return process.env.ENTRA_TOKEN_ENDPOINT || endpoint('token') },
+  get tenantId () { return process.env.ENTRA_TENANT_ID || SANDBOX.tenantId },
+  // The public keys the ID token's signature is checked against.
+  get jwksUri () { return process.env.ENTRA_JWKS_URI || `${authority()}/discovery/v2.0/keys` },
+  // External ID issues from the tenant-ID subdomain, not the friendly one in authorityHost - as its
+  // /v2.0/.well-known/openid-configuration says.
+  get issuer () { return process.env.ENTRA_ISSUER || `https://${config.tenantId}.ciamlogin.com/${config.tenantId}/v2.0` },
   get port () { return process.env.PORT || SANDBOX.port },
   get redirectUri () { return process.env.ENTRA_REDIRECT_URI || `http://localhost:${config.port}/auth/callback` },
   // Entra only redirects to a URI registered on the app, so an https one means serving https here.
