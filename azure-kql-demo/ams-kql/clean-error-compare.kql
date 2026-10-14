@@ -1,0 +1,157 @@
+// Clean error types comparison table - before vs since RecentPeriodStart
+// Uses workbook parameters for flexibility
+
+// Calculate time ranges based on RecentDate parameter
+let RecentPeriodStart = todatetime("{RecentDate}");
+let HistoricalPeriodStart = RecentPeriodStart - 63d; // 63 days before RecentDate
+let HistoricalPeriodEnd = RecentPeriodStart;
+
+// Enhanced function to clean and normalize error messages with better pattern recognition
+let CleanErrorMessage = (logEntry: string) {
+    // First extract the main error message
+    let rawError = case(
+        logEntry contains "EJBTransactionRolledbackException:", extract(@"EJBTransactionRolledbackException:\s*(.+)", 1, logEntry),
+        logEntry contains "Exception:", extract(@"(\w+Exception):\s*(.+?)(?:\n|\r|\.?\s*at\s|$)", 0, logEntry),
+        logEntry contains "Error:", extract(@"Error:\s*(.+?)(?:\n|\r|$)", 1, logEntry),
+        logEntry contains " ERROR ", extract(@"ERROR[^\]]*\]\s*(.+?)(?:\n|\r|$)", 1, logEntry),
+        "Unknown Error"
+    );
+
+    // Enhanced cleaning with more specific patterns based on actual data
+    // First handle quoted UUIDs to prevent conflicts
+    let step0 = replace_regex(rawError, @"""[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}""", """UUID""");
+    let step1 = replace_regex(step0, @"[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}", "UUID");  // UUIDs
+    let step2 = replace_regex(step1, @"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z?", "TIMESTAMP");  // ISO timestamps
+    let step3 = replace_regex(step2, @"\d{2}/\w{3}/\d{4}:\d{2}:\d{2}:\d{2}", "TIMESTAMP");  // Log timestamps
+    let step4 = replace_regex(step3, @"\b[a-fA-F0-9]{32,}\b", "HASH");  // Long hashes
+    let step5 = replace_regex(step4, @"\b[a-fA-F0-9]{16,31}\b", "ID");  // Shorter IDs
+    let step6 = replace_regex(step5, @"https?://[^\s""]+", "URL");  // URLs (including quoted ones)
+    let step7 = replace_regex(step6, @"\b\d{5,}\b", "NUMBER");  // Large numbers (like event numbers)
+    let step8 = replace_regex(step7, @"Thread-\d+", "Thread-X");  // Thread names
+    let step9 = replace_regex(step8, @"task-\d+", "task-X");  // Task names
+    let step10 = replace_regex(step9, @":\d{4,5}\b", ":PORT");  // Port numbers
+
+    // NEW: Address specific patterns found in the CSV data
+    // 1. Group different creditor codes in enforcement errors
+    let step11 = replace_regex(step10, @"Invalid major creditor code [A-Z0-9]+ encountered", "Invalid major creditor code XXXX encountered");
+
+    // 2. Normalize connection pool names
+    let step12 = replace_regex(step11, @"java:/(?:app/[^/]+/)?DS\.[a-zA-Z-]+", "java:/DS.CONNECTION_POOL");
+
+    // 3. Group different date patterns in court scheduler errors
+    let step13 = replace_regex(step12, @"\d{4}-\d{2}-\d{2}", "YYYY-MM-DD");
+
+    // 4. Normalize request/stream/event IDs in specific contexts
+    let step14 = replace_regex(step13, @"Request [a-fA-F0-9-]+ failed", "Request REQUEST_ID failed");
+    let step15 = replace_regex(step14, @"streamId: '[a-fA-F0-9-]+'", "streamId: 'STREAM_ID'");
+    let step16 = replace_regex(step15, @"eventId: '[a-fA-F0-9-]+", "eventId: 'EVENT_ID");
+
+    // 5. Normalize hearing/case detail IDs in specific error patterns
+    let step17 = replace_regex(step16, @"hearingId: [a-fA-F0-9-]+", "hearingId: HEARING_ID");
+    let step18 = replace_regex(step17, @"defendantId: [a-fA-F0-9-]+", "defendantId: DEFENDANT_ID");
+    let step19 = replace_regex(step18, @"offenceId: [a-fA-F0-9-]+", "offenceId: OFFENCE_ID");
+
+    // 6. Normalize version numbers and sequences
+    let step20 = replace_regex(step19, @"version=\d+", "version=X");
+    let step21 = replace_regex(step20, @"sequence=\d+", "sequence=X");
+
+    // 6b. Normalize UUIDs in JSON context (without quotes but with colons/commas) - quoted UUIDs already handled in step0
+    let step21b = replace_regex(step21, @":[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}([,}])", ":UUID$1");
+    let step21c = replace_regex(step21b, @"\[[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}", "[UUID");
+
+    // 7. Normalize creditor codes in error messages more broadly (but not UUIDs)
+    let step22 = replace_regex(step21c, @"""[A-Z]{2,4}[0-9]{0,2}""", """CREDITOR_CODE""");
+
+    // 8. Normalize file paths and specific service names in bean references
+    let step23 = replace_regex(step22, @"\/[a-zA-Z-]+\/[a-zA-Z-]+\/[a-zA-Z-]+\.jar", "/SERVICE/PATH/file.jar");
+
+    // 9. Group similar court schedule combination errors
+    let step24 = replace_regex(step23, @"combination null, \d{4}-\d{2}-\d{2}, null, null", "combination null, DATE, null, null");
+
+    // 10. Normalize EE-ManagedExecutorService thread names
+    let step25 = replace_regex(step24, @"EE-ManagedExecutorService-default-Thread-\d+", "EE-ManagedExecutorService-default-Thread-X");
+
+    // NEW: Additional patterns based on user feedback
+    // 11. Normalize ServerService thread pool numbers
+    let step26 = replace_regex(step25, @"ServerService Thread Pool -- \d+", "ServerService Thread Pool -- X");
+
+    // 12. Normalize transaction XIDs (complex transaction identifiers)
+    let step27 = replace_regex(step26, @"xid=< formatId=[^,]+, gtrid_length=[^,]+, bqual_length=[^,]+, tx_uid=[^,]+, node_name=[^,]+, branch_uid=[^,]+, subordinatenodename=[^,]+, eis_name=[^>]+ >", "xid=< TRANSACTION_ID >");
+
+    // 12b. Also normalize preparedXid patterns in rollback errors
+    let step27b = replace_regex(step27, @"preparedXid=< formatId=[^,]+, gtrid_length=[^,]+, bqual_length=[^,]+, tx_uid=[^,]+, node_name=[^,]+, branch_uid=[^,]+, subordinatenodename=[^,]+, eis_name=[^>]+ >", "preparedXid=< PREPARED_TRANSACTION_ID >");
+
+    // 13. Normalize access control rule invoker references with hex addresses
+    let step28 = replace_regex(step27b, @"Rule_[^@]+@[a-fA-F0-9]+", "Rule_ACCESS_CONTROL@MEMORY_ADDRESS");
+
+    // 14. Normalize HTTP status codes in RuntimeException messages but keep the error type
+    let step29 = replace_regex(step28, @"Request UUID failed\s+expected \d+ but got (\d+) with reason ""([^""]+)""", "Request REQUEST_ID failed expected STATUS but got $1 with reason \"$2\"");
+
+    // 15. Normalize version numbers in JSON metadata
+    let step30 = replace_regex(step29, @"""version"":\d+", "\"version\":X");
+
+    // 16. Normalize currentXid references in transaction errors
+    let step31 = replace_regex(step30, @"currentXid=\{[^}]+\}", "currentXid=CURRENT_XID");
+
+    // 17. Group SLF4J errors (remove URL references and specific class names)
+    let step32 = replace_regex(step31, @"SLF4J: See https?://[^\s]+ for further details\.", "SLF4J: See URL for further details.");
+    let step33 = replace_regex(step32, @"SLF4J: Failed to load class ""[^""]+""", "SLF4J: Failed to load class \"CLASS_NAME\"");
+
+    // 18. Normalize Java object memory addresses (e.g., @42ad1ab4)
+    let step34 = replace_regex(step33, @"@[a-fA-F0-9]{6,8}", "@MEMORY_ADDRESS");
+
+    // 19. Normalize document type descriptions in metadata
+    let step35 = replace_regex(step34, @"""documentTypeDescription"":""[^""]+""", """documentTypeDescription"":""DOCUMENT_TYPE""");
+
+    // 20. Normalize document categories in metadata
+    let step36 = replace_regex(step35, @"""documentCategory"":""[^""]+""", """documentCategory"":""DOCUMENT_CATEGORY""");
+
+    // 21. Normalize causation arrays (arrays of UUIDs)
+    let step37 = replace_regex(step36, @"""causation"":\[([UUID,]*UUID)\]", """causation"":[CAUSATION_IDS]");
+
+    // 22. Normalize ActiveMQ thread names
+    let step38 = replace_regex(step37, @"Thread-X \(ActiveMQ-client-global-threads\)", "Thread-X (ActiveMQ-client-global-threads)");
+
+    step38
+};
+
+// Main comparison query
+let ContainerIdList = KubePodInventory
+    | where strlen(ContainerID) > 0
+    | distinct ContainerID, PodLabel, Namespace, PodIp, Name;
+ContainerLog
+| where TimeGenerated >= HistoricalPeriodStart
+| where ContainerID in (ContainerIdList)
+| lookup kind=leftouter (ContainerIdList) on ContainerID
+| project-away Image, ImageTag, Repository, Name, TimeOfCommand
+| project-rename PodName=Name1
+| where LogEntry contains " ERROR "
+| where Namespace contains "sit"
+| extend ServiceName = extract(@"([a-zA-Z-]+service)", 1, PodName)
+| where "{ServiceFilter}" == "*" or ServiceName == "{ServiceFilter}"
+| extend CleanErrorType = CleanErrorMessage(LogEntry)
+| where isnotempty(CleanErrorType) and CleanErrorType != "Unknown Error"
+| extend TimePeriod = case(
+    TimeGenerated >= RecentPeriodStart, "Recent",
+    TimeGenerated >= HistoricalPeriodStart and TimeGenerated < HistoricalPeriodEnd, "Historical",
+    "Other"
+)
+| where TimePeriod in ("Recent", "Historical")
+| summarize
+    HistoricalCount = countif(TimePeriod == "Historical"),
+    RecentCount = countif(TimePeriod == "Recent"),
+    FirstSeen = min(TimeGenerated),
+    LastSeen = max(TimeGenerated),
+    SampleLogEntry = take_any(LogEntry),
+    AffectedServices = make_set_if(ServiceName, TimePeriod == "Recent")
+    by CleanErrorType
+| extend IsNewError = (HistoricalCount == 0)
+| extend TrendDirection = case(
+    RecentCount > HistoricalCount, "↗️ Increasing",
+    RecentCount < HistoricalCount, "↘️ Decreasing",
+    RecentCount == HistoricalCount and RecentCount > 0, "➡️ Stable",
+    "📊 Data"
+)
+| where RecentCount > 0 or HistoricalCount > 0  // Show all error types that appear in either period
+| project CleanErrorType, HistoricalCount, RecentCount, TrendDirection, IsNewError, FirstSeen, LastSeen, AffectedServices, SampleLogEntry
+| order by RecentCount desc, CleanErrorType asc
