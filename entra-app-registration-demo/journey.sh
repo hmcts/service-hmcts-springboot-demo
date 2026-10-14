@@ -75,18 +75,38 @@ for attempt in $(seq 1 "$GRANT_ATTEMPTS"); do
   sleep 15
 done
 
-step "3. Get a token for $API_CLIENT_ID"
-# Retried: a secret seconds old is rejected as invalid_client until Entra has replicated it.
-for attempt in $(seq 1 20); do
-  TOKEN_RESPONSE=$(curl -fsS -X POST "https://login.microsoftonline.com/$TENANT/oauth2/v2.0/token" \
+claims () { jq -R 'split(".")[1] | @base64d | fromjson' <<<"$1"; }
+
+step "3. Get a token for $API_CLIENT_ID carrying $ROLE"
+# Two separate waits, both of them Entra catching up with itself. A secret seconds old is rejected
+# as invalid_client until it has replicated. Worse, once the secret works the token can come back
+# without the role: the assignment is already in the directory - the GET shows it - but the token
+# service has not seen it yet, and a token with "roles": null is refused by APIM's validate-jwt two
+# steps later, which is a long way from the cause. Entra issues a fresh token per request rather
+# than replaying a cached one, so asking again is what fixes it.
+TOKEN_ATTEMPTS=${TOKEN_ATTEMPTS:-30}
+for attempt in $(seq 1 "$TOKEN_ATTEMPTS"); do
+  # Not -f: a 401 from the token endpoint carries the JSON saying which of the two waits this is,
+  # and -f throws that body away, leaving the retry line with nothing to report.
+  TOKEN_RESPONSE=$(curl -sS -X POST "https://login.microsoftonline.com/$TENANT/oauth2/v2.0/token" \
     -d "client_id=$CLIENT_ID" --data-urlencode "client_secret=$CLIENT_SECRET" \
     -d "scope=$API_CLIENT_ID/.default" -d "grant_type=client_credentials" || true)
   TOKEN=$(jq -r '.access_token // empty' <<<"$TOKEN_RESPONSE")
-  [ -n "$TOKEN" ] && { [ "$attempt" -gt 1 ] && echo "   (took $attempt attempts while the secret replicated)"; break; }
-  [ "$attempt" = 20 ] && die "   No token after 20 attempts: $(jq -r '.error_description // .' <<<"$TOKEN_RESPONSE" | head -1)"
+
+  if [ -z "$TOKEN" ]; then
+    WAITING_FOR="no token yet: $(jq -r '.error // "no response"' <<<"$TOKEN_RESPONSE")"
+  elif [ "$(claims "$TOKEN" | jq -r --arg r "$ROLE" 'if (.roles // []) | index($r) then "yes" else "no" end')" = "yes" ]; then
+    [ "$attempt" -gt 1 ] && echo "   got a token carrying $ROLE on attempt $attempt"
+    break
+  else
+    WAITING_FOR="token issued but $ROLE is not in it yet"
+  fi
+
+  [ "$attempt" = "$TOKEN_ATTEMPTS" ] && die "   Gave up after $TOKEN_ATTEMPTS attempts - $WAITING_FOR"
+  echo "   attempt $attempt: $WAITING_FOR, waiting"
   sleep 2
 done
-jq -R 'split(".")[1] | @base64d | fromjson | {aud, roles, azp}' <<<"$TOKEN" | sed 's/^/   /'
+claims "$TOKEN" | jq '{aud, roles, azp}' | sed 's/^/   /'
 
 step "4. Call slc through APIM"
 echo "   GET $GATEWAY/amp/slc/case/$CASE_URN/courtschedule"
