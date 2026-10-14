@@ -11,10 +11,5 @@ In this case we can and should use MapStruct to get the mappings for free with t
 Often we map between java objects and json strings
 We have various tools for doing this with the most common being Jackson and Gson.
 
-Sometimes we need to configure the mapper to handle dates in our preferred format which is UTC
-
-... TBC would like a global mapper to be available across our app to avoid duplication and differing styles
-
-Using jackson fasterxml ObjectMapper is a pain because it declares to throw JsonProcessingException
-Whilst Gson and jackson databind ObjectMapper do not. 
-They assume that its given that you know the data format has to be correct else it will throw.
+JsonMapper in this demo shows how we convert to and from json
+And some common helpers like one to get a UUID from a json string by jsonPath / jsonPointer in jackson
