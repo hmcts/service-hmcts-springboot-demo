@@ -239,9 +239,16 @@ doing so for minutes. Registering first leaves the application standing while th
 rather than a single call that blocks and then rolls the registration back. `GRANT_ATTEMPTS` (5)
 controls how many times the script tries.
 
-The token request is retried too: a secret seconds old is rejected as `invalid_client` until Entra
-has replicated it. A `404` at the last step is a result, not a failure - it means the gateway
-accepted the token and the subscription key, and the backend simply has no such case.
+The token request is retried on two counts. A secret seconds old is rejected as `invalid_client`
+until Entra has replicated it. And once the secret works the token can still come back without the
+role - `"roles": null` - because the assignment is in the directory, where `GET /applications/{id}`
+can already see it, but the token service has not caught up. That token is refused by APIM two steps
+later, a long way from the cause, so the script keeps asking until the role is actually in the token.
+Entra issues a fresh token per request rather than replaying a cached one, which is what makes
+asking again work. `TOKEN_ATTEMPTS` (30, 2s apart) controls it.
+
+A `404` at the last step is a result, not a failure - it means the gateway accepted the token and
+the subscription key, and the backend simply has no such case.
 
 The application is deleted again at the end whatever happens - but a script that is killed never
 runs its trap, so orphans do happen. That is why the name carries the person who ran it,
