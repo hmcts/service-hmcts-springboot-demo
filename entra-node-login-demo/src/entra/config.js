@@ -4,23 +4,37 @@
 // it is a credential: the client ID and the tenant's endpoints are sent to the browser on every
 // sign-in, which is why they can sit in a public repo. The secret cannot, and has no default.
 const SANDBOX = {
+  authorityHost: 'https://hmctsextsbox.ciamlogin.com',
+  tenantId: 'd44f885c-4fac-47bf-afde-d7d861ec4d7b',
   clientId: 'aedd508a-d053-4d15-ae9c-6a61a54370f6',
-  authorizeEndpoint: 'https://hmctsextsbox.ciamlogin.com/d44f885c-4fac-47bf-afde-d7d861ec4d7b/oauth2/v2.0/authorize',
-  tokenEndpoint: 'https://hmctsextsbox.ciamlogin.com/d44f885c-4fac-47bf-afde-d7d861ec4d7b/oauth2/v2.0/token',
   // Matches the redirect URI registered on that app registration. On another port Entra answers
   // AADSTS50011 (redirect URI mismatch) before the user ever sees a login form.
   port: 3100
 }
+
+// Entra publishes both at <authority>/<tenant>/v2.0/.well-known/openid-configuration; they are
+// derived rather than configured so a different tenant needs two settings, not four.
+const authority = () =>
+  `${process.env.ENTRA_AUTHORITY_HOST || SANDBOX.authorityHost}/${config.tenantId}`
+const endpoint = name => `${authority()}/oauth2/v2.0/${name}`
 
 // Read on each use rather than captured at import, so it cannot matter whether this module was
 // loaded before or after the environment was set up.
 const config = {
   get clientId () { return process.env.ENTRA_SIGNIN_CLIENT_ID || SANDBOX.clientId },
   get clientSecret () { return process.env.ENTRA_SIGNIN_CLIENT_SECRET },
-  get authorizeEndpoint () { return process.env.ENTRA_AUTHORIZE_ENDPOINT || SANDBOX.authorizeEndpoint },
-  get tokenEndpoint () { return process.env.ENTRA_TOKEN_ENDPOINT || SANDBOX.tokenEndpoint },
+  get authorizeEndpoint () { return process.env.ENTRA_AUTHORIZE_ENDPOINT || endpoint('authorize') },
+  get tokenEndpoint () { return process.env.ENTRA_TOKEN_ENDPOINT || endpoint('token') },
+  get tenantId () { return process.env.ENTRA_TENANT_ID || SANDBOX.tenantId },
+  // The public keys the ID token's signature is checked against.
+  get jwksUri () { return process.env.ENTRA_JWKS_URI || `${authority()}/discovery/v2.0/keys` },
+  // External ID issues from the tenant-ID subdomain, not the friendly one in authorityHost - as its
+  // /v2.0/.well-known/openid-configuration says.
+  get issuer () { return process.env.ENTRA_ISSUER || `https://${config.tenantId}.ciamlogin.com/${config.tenantId}/v2.0` },
   get port () { return process.env.PORT || SANDBOX.port },
   get redirectUri () { return process.env.ENTRA_REDIRECT_URI || `http://localhost:${config.port}/auth/callback` },
+  // Entra only redirects to a URI registered on the app, so an https one means serving https here.
+  get usesHttps () { return config.redirectUri.startsWith('https:') },
   scope: 'openid profile email'
 }
 
@@ -37,6 +51,8 @@ function assertConfigured () {
     '',
     '  export ENTRA_SIGNIN_CLIENT_SECRET=...   # from the Entra app registration',
     '  npm start',
+    '',
+    'Or read it from Key Vault: set ENTRA_KEY_VAULT and ENTRA_KEY_VAULT_SECRET (see .env.example).',
     '',
     'Everything else defaults to the HMCTS sandbox tenant. Never put the secret in a file here.',
     '',

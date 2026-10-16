@@ -6,12 +6,15 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node --test"
+    "test": "node --test",
+    "cert": "mkdir -p certs && openssl req -x509 -newkey rsa:2048 -nodes -days 365 -keyout certs/localhost-key.pem -out certs/localhost.pem -subj '/CN=localhost' -addext 'subjectAltName=DNS:localhost'"
   },
   "engines": {
-    "node": ">=20.6"
+    "node": ">=20.12"
   },
   "dependencies": {
+    "@azure/identity": "4.13.3",
+    "@azure/keyvault-secrets": "4.11.2",
     "cookie-parser": "^1.4.7",
     "express": "^4.21.2"
   },
